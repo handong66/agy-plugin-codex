@@ -25,11 +25,10 @@ schema rather than any model behaviour. That is what lets CI run them on two pla
 
 ### 0.1.0 — 2026-08-20 (agy 1.1.16, Codex CLI 0.144.1, Node 25.9.0, macOS)
 
-- `npm run check`: typecheck clean, both bundles built (`server.js`, `job-worker.js`), full
-  vitest suite green, repository plugin validation passed, MCP smoke reported
-  `10 tools available`.
-- `npm run check`: **21 test files, 306 tests, all passing**.
-- `npm run test:integration`: **3 files, 23 tests, all passing** in 9.3s.
+- `npm run check`: typecheck clean, both bundles built (`server.js`, `job-worker.js`),
+  **21 test files / 306 tests all passing**, repository plugin validation passed, MCP smoke
+  reported `10 tools available`.
+- `npm run test:integration`: **3 files, 23 tests, all passing**.
 - `npm run smoke:agy-cli` against the real binary: `agy version: 1.1.16`,
   `10 flags present, 14 models reachable`.
 - `npm run smoke:live-agy` against a real Antigravity account, in a throwaway git

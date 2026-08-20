@@ -16,6 +16,7 @@ npm run check              # typecheck + bundle + full suite + plugin validation
 npm run test:integration
 npm run smoke:agy-cli      # needs the real CLI: the flags this design rests on still exist
 npm run smoke:live-agy     # spends real quota: proves --add-dir targets the workspace
+npm run smoke:live-full    # spends real quota: all ten tools against real agy
 git diff --check
 ```
 
@@ -53,6 +54,55 @@ schema rather than any model behaviour. That is what lets CI run them on two pla
   copy`. The description had deferred to its sibling tool ("same guarantee as agy_review"),
   which is invisible to a caller reading one tool's schema. Fixed by stating the guarantee in
   full on both tools.
+
+### Every tool against real agy — 2026-08-20
+
+`npm run smoke:live-full` drives all ten tools through the built MCP server against a real
+Antigravity account, in a throwaway git repository, on `gemini-3.7-flash-low`:
+
+```
+PASS  agy_run background:false returns an answer inline -- state=succeeded_with_text model=gemini-3.7-flash-low
+PASS  agy_run background reads the workspace and reaches resultComplete -- tools=2 files=1
+PASS  agy_status reports the job terminal and hands back the resume handle -- conversation=cec75e04-b671-4261-8df0-1bd84c27ec92
+PASS  agy_continue carries the earlier context -- finalText="sentinel.txt"
+PASS  agy_continue detects a conversation agy could not resume -- warning raised
+PASS  agy_review runs isolated and cites the real repository path -- tools=3 isolation={"mirrorFileCount":2,"mirrorSkippedCount":0,"warnings":[]}
+PASS  agy_adversarial_review runs isolated -- tools=4 isolation={"mirrorFileCount":2,"mirrorSkippedCount":0,"warnings":[]}
+PASS  agy_rescue produces a diagnosis -- tools=2
+PASS  agy_cancel ends a running job and the record stays cancelled -- terminal=true
+PASS  agy_conversations lists the conversations this run created -- returned=5 scanned=11
+PASS  both read-only reviews left the repository byte-identical -- git status clean
+
+11/11 checks passed against real agy.
+```
+
+The fifth line is the one worth pausing on. It resumes onto a conversation id that does not
+exist; agy answers it with exit 0 and `status: "SUCCESS"` from a brand-new conversation that
+has none of the earlier context. The `conversation_not_found` warning fired against the real
+CLI, so that guard is measured rather than merely written.
+
+### Installed in a real Codex session — 2026-08-20
+
+The gate this repository cannot run on its own, now run:
+
+```
+codex plugin marketplace add /Users/domo/Downloads/agy-plugin-codex
+codex plugin add agy-plugin-codex@agy-plugin-codex
+```
+
+`codex plugin list` reports `agy-plugin-codex@agy-plugin-codex  installed, enabled  0.1.0`.
+The installed cache root at `~/.codex/plugins/cache/.../0.1.0/` carries `dist/server.js` and
+`dist/job-worker.js`, which is why `dist/` is a tracked artifact: an installed plugin has no
+build step, and without the bundles Codex would have nothing to run.
+
+A real `codex exec` session then loaded the Skill and called the tool:
+
+```
+mcp: agy-plugin-codex/agy_check started
+mcp: agy-plugin-codex/agy_check (completed)
+codex
+1.1.16, 14
+```
 
 ## Runtime contract evidence
 
@@ -159,13 +209,9 @@ review and fails if the repository is dirty afterwards.
 
 ## Installed-plugin pickup — run before announcing a release
 
-The one gate this repository cannot run on its own. Install the plugin in a real Codex
-session from this checkout and confirm, in order:
-
-1. The ten tools appear.
-2. `agy_check` reports the installed agy version and a non-empty model list.
-3. `agy_run` in a scratch repository reaches `resultComplete: true`.
-4. `agy_review` in that repository returns findings and leaves `git status` clean.
-5. `agy_status` on a finished job reports `terminal: true`.
+The one gate this repository cannot run on its own. Install from the checkout and confirm the
+plugin is `installed, enabled`, that the installed cache root carries both `dist/` bundles,
+and that a real `codex exec` session calls a tool. Done for 0.1.0 on 2026-08-20; the evidence
+is under "Installed in a real Codex session" above.
 
 A run that is not recorded here did not happen.

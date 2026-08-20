@@ -173,12 +173,19 @@ Two further gates need the real CLI and are opt-in:
 ```bash
 npm run smoke:agy-cli    # the ten agy flags this design rests on still exist
 npm run smoke:live-agy   # spends real quota: proves --add-dir targets the workspace
+npm run smoke:live-full  # spends real quota: all ten tools against real agy
 ```
 
 `smoke:live-agy` builds a throwaway git repository with a sentinel file, asks agy to read it,
 and fails unless the sentinel comes back — the one check that cannot be faked, because agy
 could only have produced that string by reading a file that exists nowhere else. It then runs
 a read-only review and fails if `git status` is dirty afterwards.
+
+`smoke:live-full` is the wider pass: all ten tools, including a resume onto a conversation id
+that does not exist. agy answers that one with exit 0 and `SUCCESS` from a brand-new
+conversation, so it is the check that proves the `conversation_not_found` guard fires against
+the real CLI rather than only against a fixture. Recorded output is in
+[`docs/verification.md`](docs/verification.md).
 
 `plugin.json`'s version may carry a `+codex.<timestamp>` cachebuster during development, which
 is how an installed plugin cache is forced to pick up a rebuild. The release gate refuses it

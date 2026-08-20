@@ -19,6 +19,7 @@
     "smoke:mcp": "node scripts/smoke-mcp.mjs",
     "smoke:agy-cli": "node scripts/smoke-agy-cli.mjs",
     "smoke:live-agy": "node scripts/live-agy-smoke.mjs",
+    "smoke:live-full": "node scripts/live-agy-full.mjs",
     "check": "npm run build && npm test && npm run validate:plugin && npm run smoke:mcp"
   },
   "dependencies": {

@@ -2,6 +2,7 @@
 import { chmod, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { spawn, type ChildProcess } from "node:child_process";
 import { readStreamProgress, sanitizeAgyEnv, withPrompt } from "./agy-cli.js";
+import { isBoundaryError } from "./boundary.js";
 import { finalizeJobRecord, isProviderStall } from "./job-finalize.js";
 import { JobStore, WORKSPACE_PLACEHOLDER, type JobRecord } from "./job-store.js";
 import {
@@ -352,7 +353,12 @@ async function main(): Promise<void> {
     record = await store.read(jobId).catch(() => record);
     if (record.status !== "cancelled") {
       record.status = "failed";
-      record.errorClass = "worker_error";
+      // A typed refusal keeps its own code. Flattening a BoundaryError into
+      // `worker_error` costs the caller twice: `worker_error` is not in the
+      // vocabulary the Skill publishes, so nothing can route on it, and it is
+      // retryable -- which tells the caller to retry a call that provably cannot
+      // succeed until the world changes (a review outside a git repository, say).
+      record.errorClass = isBoundaryError(error) ? error.code : "worker_error";
       record.errorMessage = error instanceof Error ? error.message : String(error);
       record.finishedAt = new Date().toISOString();
       await store.write(record).catch(() => undefined);

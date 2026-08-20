@@ -1012,6 +1012,8 @@ const NON_RETRYABLE_ERROR_CLASSES = new Set([
   "model_unauthorized",
   "model_not_found",
   "permission_denied",
+  "mirror_failed",
+  "prompt_too_large",
   "file_attachment_invalid",
   "private_path_blocked",
   "workspace_out_of_bounds",

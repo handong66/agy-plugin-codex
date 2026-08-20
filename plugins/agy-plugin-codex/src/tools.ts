@@ -31,6 +31,7 @@ import { printTimeoutFor, resolveTimeoutBudget } from "./timeout-budget.js";
 import {
   BoundaryError,
   isBoundaryError,
+  mirrorFailed,
   promptTooLarge,
   workspaceOutOfBounds,
   workspaceUnavailable
@@ -40,6 +41,7 @@ import {
   createReadOnlyMirror,
   diffMirrorSnapshots,
   fingerprintTree,
+  listMirrorFiles,
   rewriteMirrorPaths,
   snapshotMirror,
   type IsolationWarning
@@ -519,6 +521,19 @@ async function runOrStartJob(params: RunParams) {
   if (params.model) assertKnownModel(params.model);
   const warnings = [...budget.warnings, ...effort.warnings];
   const workspaceMode: WorkspaceMode = params.readOnly ? "mirror" : "direct";
+
+  if (params.readOnly) {
+    // Cheap pre-check so the refusal is synchronous and typed. Without it a
+    // background review outside a git repository returns ok:true with a jobId and
+    // only fails inside the worker, where the caller sees it far later and cannot
+    // tell a missing repository from a crash.
+    if ((await listMirrorFiles(cwd)) === null) {
+      throw mirrorFailed(
+        `${cwd} is not a git repository (or git is unavailable), and the copy is built from git's own file list`,
+        { repoRoot: cwd }
+      );
+    }
+  }
 
   if (params.readOnly) {
     warnings.push(

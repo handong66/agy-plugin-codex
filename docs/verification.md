@@ -28,7 +28,7 @@ schema rather than any model behaviour. That is what lets CI run them on two pla
 - `npm run check`: typecheck clean, both bundles built (`server.js`, `job-worker.js`), full
   vitest suite green, repository plugin validation passed, MCP smoke reported
   `10 tools available`.
-- `npm run check`: **20 test files, 301 tests, all passing** in 19.3s.
+- `npm run check`: **21 test files, 306 tests, all passing**.
 - `npm run test:integration`: **3 files, 23 tests, all passing** in 9.3s.
 - `npm run smoke:agy-cli` against the real binary: `agy version: 1.1.16`,
   `10 flags present, 14 models reachable`.
@@ -89,6 +89,23 @@ actually emitted:
   failed — so `agy_check` would report a blank version for the rest of the process, long after
   the CLI started answering. Fixed by remembering only a complete answer, which is the
   "successes only" rule every other memo in the plugin already followed.
+- **A foreground read-only review pointed agy at the real repository.** `runOrStartJob` used
+  the workspace placeholder only on the background path and baked `cwd` into `--add-dir` on
+  the synchronous one, so `runForeground`'s substitution was a no-op. `agy_review` with
+  `background: false` — a published parameter — therefore ran agy against the live working
+  tree with permissions skipped, while still building, diffing and discarding a copy it never
+  used. The advertised guarantee was false on a path reachable from the wire. Found by the
+  recorded-argv assertion in `test/tools.test.ts`; fixed by using the placeholder on both
+  paths, and both `tools.ts` and `job-worker.ts` now refuse to spawn if a placeholder survives
+  substitution.
+- **A background review outside a git repository lost its typed code.** The worker's catch
+  block flattened the `mirror_failed` refusal into `errorClass: "worker_error"` — a class the
+  Skill does not publish, so nothing could route on it, and one `isRetryableAgyFailure` calls
+  retryable, so the caller was told to retry a call that cannot succeed until the directory
+  becomes a git repository. Fixed three ways: the review tools now pre-check for a git
+  repository at submit time so the refusal is synchronous and typed, the worker preserves a
+  `BoundaryError`'s own code, and `mirror_failed` and `prompt_too_large` joined the
+  non-retryable set.
 - **A permission denial named only the first word of the command.** agy reports
   `permission check failed for command "cat a.txt"`, and the pattern captured `cat`. That
   sends the reader looking for a problem with a program rather than with a path. Fixed to

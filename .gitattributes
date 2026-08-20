@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# dist/ is a tracked release artifact: a plugin installed from a checkout has no
+# build step. The bundles are minified single lines, which trip whitespace checks
+# for no useful reason.
+plugins/agy-plugin-codex/dist/server.js -whitespace
+plugins/agy-plugin-codex/dist/job-worker.js -whitespace

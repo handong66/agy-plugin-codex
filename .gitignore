@@ -1,0 +1,7 @@
+node_modules/
+.agy-plugin-codex*/
+.venv/
+coverage/
+.DS_Store
+*.log
+.local/

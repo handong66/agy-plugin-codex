@@ -1,0 +1,5 @@
+{"event":"init","conversation_id":"5347faf1-5d39-4a25-8034-502a185fdaf4","init":{"model":"gemini-3.7-flash-low","cwd":"/tmp/agy-probe","tools":["view_file","run_command","grep_search"],"permission_mode":"always-proceed"}}
+{"event":"step_update","step_update":{"conversation_id":"5347faf1-5d39-4a25-8034-502a185fdaf4","step_index":0,"state":"DONE","step_type":"user_input"}}
+{"event":"step_update","step_update":{"conversation_id":"5347faf1-5d39-4a25-8034-502a185fdaf4","step_index":1,"state":"DONE","step_type":"checkpoint","duration_seconds":1.8070089999999999}}
+{"event":"step_update","step_update":{"conversation_id":"5347faf1-5d39-4a25-8034-502a185fdaf4","step_index":2,"state":"DONE","step_type":"agent_response","text_delta":"OK\n","duration_seconds":1.194508,"usage":{"input_tokens":13742,"output_tokens":1,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":13743}}}
+{"event":"result","result":{"conversation_id":"5347faf1-5d39-4a25-8034-502a185fdaf4","status":"SUCCESS","response":"OK\n","duration_seconds":3.030426,"num_turns":1,"usage":{"input_tokens":13742,"output_tokens":1,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":13743}}}

@@ -1,0 +1,42 @@
+{
+  "name": "agy-plugin-codex",
+  "version": "0.1.0",
+  "description": "Use Google's Antigravity CLI (agy) from Codex for bounded runs, resumable conversations, and filesystem-isolated read-only reviews.",
+  "author": {
+    "name": "handong66",
+    "url": "https://github.com/handong66"
+  },
+  "homepage": "https://github.com/handong66/agy-plugin-codex",
+  "repository": "https://github.com/handong66/agy-plugin-codex",
+  "license": "MIT",
+  "keywords": [
+    "agy",
+    "antigravity",
+    "gemini",
+    "codex",
+    "mcp",
+    "agent"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "agy for Codex",
+    "shortDescription": "Delegate work to the Antigravity CLI",
+    "longDescription": "On macOS and Linux, check the Antigravity CLI and the models your Google account can reach, delegate bounded tasks to agy, resume its conversations, and run reviews that cannot touch your repository because agy is given a disposable copy of the working tree instead of the real one. Background jobs survive a restart and keep their own private state.",
+    "developerName": "handong66",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/handong66/agy-plugin-codex",
+    "privacyPolicyURL": "https://github.com/handong66/agy-plugin-codex/blob/main/docs/privacy.md",
+    "termsOfServiceURL": "https://github.com/handong66/agy-plugin-codex/blob/main/docs/terms.md",
+    "defaultPrompt": [
+      "Check my Antigravity CLI and which models my account can reach.",
+      "Have agy review my uncommitted changes read-only.",
+      "Delegate this task to agy in the current workspace."
+    ],
+    "brandColor": "#111827"
+  }
+}

@@ -1,0 +1,1 @@
+{"conversation_id":"8ad688a0-0a59-48a6-9554-1ef7f0f87c66","status":"ERROR","response":"","error":"permission check failed for command \"cat a.txt\": user denied permission to run command:\ncat a.txt","duration_seconds":8.097357,"num_turns":1,"usage":{"input_tokens":5719,"output_tokens":115,"thinking_tokens":0,"cache_read_tokens":8130,"total_tokens":5834}}

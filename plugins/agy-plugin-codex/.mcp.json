@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "agy-plugin-codex": {
+      "title": "agy for Codex",
+      "description": "Delegate work to the Antigravity CLI with an explicit workspace, filesystem-isolated reviews, and private restart-safe background jobs.",
+      "cwd": ".",
+      "command": "node",
+      "args": [
+        "./dist/server.js"
+      ],
+      "env_vars": [
+        "AGY_BIN",
+        "AGY_WORKSPACE_ROOTS",
+        "AGY_PLUGIN_STATE_DIR",
+        "CODEX_THREAD_ID",
+        "CODEX_HOME",
+        "HOME",
+        "PATH",
+        "XDG_STATE_HOME",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+        "NO_PROXY",
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+        "no_proxy",
+        "SSL_CERT_FILE",
+        "SSL_CERT_DIR",
+        "NODE_EXTRA_CA_CERTS"
+      ]
+    }
+  }
+}

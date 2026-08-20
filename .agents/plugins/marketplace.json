@@ -1,0 +1,20 @@
+{
+  "name": "agy-plugin-codex",
+  "interface": {
+    "displayName": "agy for Codex (macOS/Linux)"
+  },
+  "plugins": [
+    {
+      "name": "agy-plugin-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agy-plugin-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

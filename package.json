@@ -1,0 +1,44 @@
+{
+  "name": "agy-plugin-codex",
+  "version": "0.1.0",
+  "description": "Codex MCP adapter for the Antigravity CLI (agy): bounded runs, resumable conversations, filesystem-isolated read-only reviews, and restart-safe background jobs.",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/handong66/agy-plugin-codex.git"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "npm run typecheck && node scripts/build.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "npm run build && vitest run test/integration",
+    "validate:plugin": "node scripts/validate-plugin.mjs",
+    "smoke:mcp": "node scripts/smoke-mcp.mjs",
+    "smoke:agy-cli": "node scripts/smoke-agy-cli.mjs",
+    "smoke:live-agy": "node scripts/live-agy-smoke.mjs",
+    "check": "npm run build && npm test && npm run validate:plugin && npm run smoke:mcp"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.3",
+    "esbuild": "0.27.2",
+    "typescript": "5.9.3",
+    "vitest": "4.1.9"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "bin": {
+    "agy-plugin-codex-mcp": "./plugins/agy-plugin-codex/dist/server.js"
+  }
+}

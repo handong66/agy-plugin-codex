@@ -1,0 +1,24 @@
+agy plugin for Codex
+Copyright 2026 the agy-plugin-codex authors
+
+This product includes software derived from the OpenCode plugin for Codex
+(https://github.com/handong66/opencode-plugin-codex) and the Grok plugin for Codex
+(https://github.com/handong66/grok-plugin-codex), both MIT licensed, which are
+themselves descended from the Codex plugin for Claude Code
+(https://github.com/openai/codex-plugin-cc), Copyright OpenAI, licensed under the
+Apache License, Version 2.0.
+
+From that lineage this project inherits the single response envelope, the typed
+boundary-refusal vocabulary, the restart-safe job store and detached background
+worker, the wall-clock budget model, and the workspace-root resolution rules.
+
+The agy runtime adapter -- discovery, argument construction, stream parsing,
+outcome classification and the read-only workspace mirror -- was written against
+behaviour measured directly from the Antigravity CLI and is documented in
+docs/AGY-RUNTIME-CONTRACT.md. The mirror design and the measured contract come
+from the sibling project agy-plugin-cc
+(https://github.com/handong66/agy-plugin-cc), Apache-2.0.
+
+Antigravity and the `agy` CLI are products of Google. This project is not
+affiliated with, endorsed by, or supported by Google, OpenAI, or Anomaly
+Innovations.

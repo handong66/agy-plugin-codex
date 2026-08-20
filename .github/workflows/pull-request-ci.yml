@@ -1,0 +1,39 @@
+name: pull-request-ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "release/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The plugin spawns detached workers and signals process groups, and the
+        # read-only mirror copies symlinks and honours case sensitivity. Those are
+        # exactly the behaviours that differ between the two platforms it runs on.
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Nothing in this job needs the agy binary or an Antigravity account: every
+      # test drives a fake CLI on AGY_BIN, and the MCP smoke asserts the published
+      # schema rather than any model behaviour.
+      - run: npm run check
+      - run: npm run test:integration

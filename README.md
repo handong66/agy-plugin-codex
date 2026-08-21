@@ -203,7 +203,7 @@ and an MCP schema smoke — none of which needs agy installed or an Antigravity 
 it on `ubuntu-latest` and `macos-latest`, because the plugin spawns detached workers and
 signals process groups, and that is exactly the behaviour that differs between the two.
 
-Two further gates need the real CLI and are opt-in:
+Three further gates need the real CLI and are opt-in:
 
 ```bash
 npm run smoke:agy-cli    # the ten agy flags this design rests on still exist

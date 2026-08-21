@@ -28,7 +28,7 @@ change the design rather than decorate it:
 
 - **agy ignores the process working directory.** Without `--add-dir` it operates inside
   `~/.gemini/antigravity-cli` and sees none of the repository, so a call with no resolvable
-  workspace is refused with `workspace_required` instead of run.
+  workspace is refused with `workspace_unavailable` instead of run.
 - **A non-existent `--add-dir` is silently ignored** — exit 0, `status: "SUCCESS"`, empty
   stderr, and the work done in agy's own state directory. Nothing in the output distinguishes
   it from a real run, so the workspace path is validated before the spawn.

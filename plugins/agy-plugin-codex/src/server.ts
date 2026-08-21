@@ -289,8 +289,10 @@ const commonShape = {
     .max(4_096)
     .optional()
     .describe(
-      "Absolute working directory. This is the directory agy is given with --add-dir, and agy can see nothing " +
-        "outside it: it ignores the process working directory entirely. Defaults to another available workspace root."
+      "Absolute working directory. This is the directory agy is given with --add-dir, and the only one it is told " +
+        "about: it ignores the process working directory entirely, so without this it works inside its own state " +
+        "directory. It is not a sandbox -- agy runs with permissions skipped -- so treat this as what agy is aimed " +
+        "at, not as a wall around it. Defaults to another available workspace root."
     ),
   model: z
     .string()
@@ -358,7 +360,9 @@ const allowCodexPrivatePathsSchema = z
   .optional()
   .describe(
     "Allow prompt references to Codex private runtime paths such as ~/.codex. Off by default. This changes only " +
-      "what the prompt may mention: agy still cannot read anything outside the directory passed to --add-dir."
+      "what the prompt may mention; it grants nothing. agy is only ever told about the directory passed to " +
+      "--add-dir, but it runs with permissions skipped and is not confined to it, so do not treat this flag as the " +
+      "only thing standing between agy and those paths."
   );
 
 server.registerTool(

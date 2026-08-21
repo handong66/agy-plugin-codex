@@ -1014,6 +1014,13 @@ const NON_RETRYABLE_ERROR_CLASSES = new Set([
   "permission_denied",
   "mirror_failed",
   "prompt_too_large",
+  // Boundary codes a worker can file onto a record. BOUNDARY_RETRYABLE calls all
+  // three non-retryable, and the same code must not read as retryable just because
+  // it arrived as a job class instead of a refusal. `cli_probe_timeout` is
+  // deliberately absent: it is the one boundary code that can succeed on a retry.
+  "state_write_failed",
+  "cli_not_found",
+  "job_not_found",
   "file_attachment_invalid",
   "private_path_blocked",
   "workspace_out_of_bounds",

@@ -12,8 +12,8 @@ import type { JobKind } from "./job-store.js";
  *
  * So the tables below are empty on purpose, and `resolveTimeoutBudget` is written
  * to stay silent for a kind it has no sample for. The only agy timings measured so
- * far are floor numbers from toy prompts (docs/AGY-RUNTIME-CONTRACT.md section 9):
- * ~2-3s for a trivial prompt with no tools, ~4s for a single-file read. Those are
+ * far are floor numbers from toy prompts (docs/AGY-RUNTIME-CONTRACT.md section 15):
+ * ~3s for a trivial prompt with no tools, ~4-6s for a single-file read. Those are
  * not review-sized work and are deliberately not turned into a budget.
  *
  * When enough real jobs have accumulated in the state directory, fill these in and
@@ -73,7 +73,7 @@ export const KIND_P90_SAMPLE_SIZE: Partial<Record<JobKind, number>> = {};
  */
 export const TYPICAL_WALL_TIME_NOTE =
   "No per-kind wall-time distribution has been measured for agy yet, so this plugin publishes none. The only " +
-  "measured figures are floors from toy prompts (about 2-3s with no tools, about 4s for a single file read), which " +
+  "measured figures are floors from toy prompts (about 3s with no tools, about 4-6s for a single file read), which " +
   "say nothing about review-sized work. Judge lateness from agy_status: a job whose lastEventAt is more than 45s in " +
   "the past has gone quiet; a job still emitting events is working, however long it has been running. Do not cancel " +
   "before timeoutMs on elapsed time alone -- a cancelled job loses the conversation a timed-out job keeps.";

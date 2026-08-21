@@ -27,7 +27,7 @@ schema rather than any model behaviour. That is what lets CI run them on two pla
 ### 0.1.0 — 2026-08-20 (agy 1.1.16, Codex CLI 0.144.1, Node 25.9.0, macOS)
 
 - `npm run check`: typecheck clean, both bundles built (`server.js`, `job-worker.js`),
-  **21 test files / 306 tests all passing**, repository plugin validation passed, MCP smoke
+  **21 test files / 316 tests all passing**, repository plugin validation passed, MCP smoke
   reported `10 tools available`.
 - `npm run test:integration`: **3 files, 23 tests, all passing**.
 - `npm run smoke:agy-cli` against the real binary: `agy version: 1.1.16`,
@@ -106,7 +106,7 @@ codex
 
 ## Runtime contract evidence
 
-`docs/AGY-RUNTIME-CONTRACT.md` is the primary record: sixteen sections, each with the probe
+`docs/AGY-RUNTIME-CONTRACT.md` is the primary record: sixteen numbered sections (plus 5a), each with the probe
 command that produced it, measured against agy 1.1.16 in a throwaway `git init` directory.
 Nothing in it is inferred from documentation and nothing is carried over from the sibling
 plugins' CLIs.
@@ -123,6 +123,7 @@ actually emitted:
 | `agy-model-not-found.json` | An unrecognised `--model`: exit 1, empty stderr, empty `conversation_id`, `num_turns` 0. |
 | `agy-print-timeout.jsonl` | A timeout that still emits a terminating `result` event and still allocates a conversation id. |
 | `agy-answered-then-errored.jsonl` | The case that breaks exit-code logic: real text plus `status: "ERROR"`. |
+| `agy-models.txt` | The `id<TAB>Display Name` listing, with the progress line the parser has to drop. |
 
 ## Defects found by verification, not by review
 
@@ -155,6 +156,25 @@ actually emitted:
   repository at submit time so the refusal is synchronous and typed, the worker preserves a
   `BoundaryError`'s own code, and `mirror_failed` and `prompt_too_large` joined the
   non-retryable set.
+- **Three documents routed callers onto a code the runtime cannot emit.** `workspace_required`
+  has a factory in `boundary.ts` and **no caller anywhere in `src/`**; every reachable path
+  refuses with `workspace_unavailable`, which the tests already asserted. The vendored Skill,
+  the routing table and the changelog all named the dead code, and the routing table had the
+  two descriptions on the wrong rows. `test/skill-contract.test.ts` cannot catch this, because
+  both are legitimate members of the same union and so both appear in both places — it is
+  exactly the class of drift only a source-first read finds. Found by an independent read-only
+  audit of the docs against the source; fixed by naming the emitted code and marking the other
+  row reserved.
+- **`docs/privacy.md` claimed agy could not read outside `--add-dir`.** The runtime contract
+  claims strictly less than that: agy is never *told* about other paths, but it runs with
+  permissions skipped and is not confined, which is precisely why the mirror drops escaping
+  symlinks. The same overclaim appeared in three user-facing strings in `src/` (the `cwd` and
+  `allowCodexPrivatePaths` descriptions, and the `private_path_blocked` refusal). All four now
+  say "only told about", not "cannot reach". This is the one documentation error in this repo
+  that could have cost a user data.
+- **The stall rule was published with two of its three conditions.** Docs said "no output for
+  45s with no tool call"; the source also requires under 4000 characters of total output, so a
+  run that streamed real text and then hung was never killed the way the docs predicted.
 - **A permission denial named only the first word of the command.** agy reports
   `permission check failed for command "cat a.txt"`, and the pattern captured `cat`. That
   sends the reader looking for a problem with a program rather than with a path. Fixed to
@@ -171,6 +191,41 @@ Regressions observed RED before they were guarded:
 - A test whose own `PATH` isolation broke its fake CLI: the fake shelled out to `wc` and `tr`,
   which are not reachable from an empty `PATH`, so its intended failure branch never ran and
   the test passed for the wrong reason. Rewritten to use shell builtins only.
+- **Two drift gates that could not fail.** After the audit, two new gates were added to
+  `test/skill-contract.test.ts` and both passed on the first run — and both still passed when
+  the exact defects they were written to catch were put back. One counted a code appearing in
+  an unrelated allowlist as evidence that the code had a caller, so it never entered its own
+  check; the other excluded overclaiming *lines* that also contained a disclaimer, and the
+  fixed text put the claim and the disclaimer on one line, so the violation exempted itself.
+  A gate that cannot fail is worse than no gate, because it reads as coverage. Both were
+  rewritten and then falsified four ways — routing table, Skill, `docs/privacy.md`, and a
+  `src/` string — each producing exactly the expected red before being restored to green. The
+  first of the two is deliberately narrow now: a static rule cannot decide reachability here
+  (`buildAgyArgs` really does throw `workspace_required`; it is simply called with a constant
+  that is never empty), so it pins the one fact that was wrong rather than pretending to a
+  generality it does not have.
+
+## Documentation audit — 2026-08-20
+
+The mechanical drift gate (`test/skill-contract.test.ts`) only proves that every code the
+source can emit appears in the routing table and that every identifier the docs name exists in
+the source. It cannot tell whether a row's *prose* is still true, nor whether the docs point at
+the right one of two equally-valid codes. So the docs were also read against the source by an
+independent pass, and it found four things the gate is structurally unable to see: the
+`workspace_required` misrouting, the `docs/privacy.md` confinement overclaim, the missing third
+stall condition, and a cancel recommendation that pointed callers at exactly the runs the
+watchdog deliberately spares. All four are fixed above.
+
+It also surfaced five under-documented behaviours a caller would be surprised by, now
+published: `finalTextPartial` is true for any unfinished text and not only for an error;
+`evidenceLevel`'s thresholds; `agy_conversations` scanning only the 500 newest records;
+`threatModel`, `problem`, `conversationId` and `includeModels` being absent from the Skill the
+model actually loads; and the plugin's own bounded read of `$CODEX_HOME/sessions`, which a
+privacy document that blocks `~/.codex` in prompts had to disclose.
+
+One consistency fix followed from it: `state_write_failed`, `cli_not_found` and `job_not_found`
+joined `NON_RETRYABLE_ERROR_CLASSES`, so a boundary code that reaches a job record via the
+worker reports the same `retryable` value it would as a refusal.
 
 ## Read-only isolation
 

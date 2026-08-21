@@ -21,13 +21,26 @@ the state directory when you want the history gone.
 agy keeps its own state in `~/.gemini/antigravity-cli/`, including full conversation
 transcripts. That is agy's, not this plugin's, and it is written on every run.
 
+## What the plugin reads under `~/.codex`
+
+agy cannot fall back to a working directory, so when Codex supplies no workspace for a call
+the plugin recovers one from the current thread's own rollout file: it walks
+`$CODEX_HOME/sessions` (default `~/.codex/sessions`) for a `.jsonl` whose name carries the
+thread id, reads the **first 64 kB only**, and takes `session_meta.cwd` from a record whose own
+id matches that thread. Nothing else in the transcript is parsed, nothing is copied, and
+nothing is sent to agy — the recovered value is a directory path, used the same way an explicit
+`cwd` would be. It is worth stating plainly because the section above makes a point of
+blocking `~/.codex` in prompts.
+
 ## What is kept away from agy
 
 - Every `CODEX_*` environment variable is removed before agy is spawned.
 - A prompt naming a Codex private runtime path such as `~/.codex` is refused by default;
   `allowCodexPrivatePaths` is the explicit override and is not offered on the review tools.
-- agy can only read inside the directory passed to `--add-dir`, so paths outside the workspace
-  are unreachable regardless.
+- agy is only ever *told about* the directory passed to `--add-dir`. That is not a sandbox: it
+  runs with its permission prompts skipped and is not confined to that directory, which is why
+  the guard above is the boundary rather than a backstop. The isolation this plugin offers
+  protects your repository, not the whole filesystem.
 
 ## What is kept out of responses
 

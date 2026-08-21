@@ -15,7 +15,8 @@ characters is returned once, as `structuredContent`, and the text block carries 
 Every tool returns one envelope: `{ ok, error?, warnings, data }`. The payload lives in
 `data`. A few cheap scalars are mirrored at the top level for convenience — `background`,
 `terminal`, `nextAction`, `waited`, `resumable`, `agyConversationId`, `observedModel`,
-`errorClass`, `exitCode`, `workspaceMode`, `readOnly`, `view` — while the bulk fields
+`errorClass`, `exitCode`, `workspaceMode`, `readOnly`, `view`, plus the read-tail scalars
+(`references/failure-routing.md` has the full list of twenty) — while the bulk fields
 (`job`, `record`, `stdout`, `stderr`, `outputSummary`, `models`) live in `data` and nowhere
 else. `warnings` is always an array and is where this plugin puts everything it noticed but
 did not refuse over; several of them are load-bearing, so read them.
@@ -42,12 +43,16 @@ if a code exists in one and not the other.
 
 Three properties of the Antigravity CLI shape every tool here, and an orchestrator that
 assumes otherwise will misread the results. All three are measured, and
-`docs/AGY-RUNTIME-CONTRACT.md` carries the probes.
+the repository's `docs/AGY-RUNTIME-CONTRACT.md` carries the probes
+(<https://github.com/handong66/agy-plugin-codex/blob/main/docs/AGY-RUNTIME-CONTRACT.md>; it is
+not shipped inside the installed plugin).
 
 **agy cannot see a directory it was not given.** It ignores the process working directory
 entirely; without `--add-dir` it operates inside `~/.gemini/antigravity-cli` and sees none of
 the repository. So `cwd` is not a convenience here, it is the whole of what a run can reach,
-and a call with no resolvable workspace is refused with `workspace_required` rather than run.
+and a call with no resolvable workspace is refused with `workspace_unavailable` rather than
+run. (`workspace_required` exists in the vocabulary as an internal guard and has no runtime
+path; route on `workspace_unavailable`.)
 
 **agy cannot read without also being able to write.** Headless runs auto-deny every tool
 call unless permissions are skipped wholesale; `--sandbox` does not help, and plan mode
@@ -61,14 +66,23 @@ code as the verdict; read `outputSummary`.
 
 - **Diagnose first, once per session.** `agy_check` reports the binary, the version, whether
   the account is signed in, which model ids it can reach, the workspace roots this plugin can
-  see, and any proxy in effect. The answer is cached for the life of the server process;
-  `force: true` re-reads it. Call it at the start of a batch, not before every task.
-- **Delegate work.** `agy_run` for a task, `agy_continue` to carry one on. Both are
-  **write-capable in `cwd`** — that is not a setting, it is the only mode agy has.
+  see, and any proxy in effect. The model listing is also the sign-in check, so leave
+  `includeModels` alone unless you deliberately want to skip it. The answer is cached for the
+  life of the server process; `force: true` re-reads it. Call it at the start of a batch, not
+  before every task.
+- **Delegate work.** `agy_run` for a task, `agy_continue` (which needs a `conversationId`) to
+  carry one on. Both are **write-capable in `cwd`** — that is not a setting, it is the only
+  mode agy has. Both accept `allowCodexPrivatePaths`, which only widens what the prompt may
+  mention and grants agy nothing.
 - **Review without risk to the repository.** `agy_review` and `agy_adversarial_review` give
   agy a disposable copy of the working tree and never tell it the repository's path. See
-  "Read-only means the filesystem".
-- **Ask why something is stuck.** `agy_rescue`. It is deliberately NOT isolated: a rescue
+  "Read-only means the filesystem". Both take `target` (what to review, in words — default is
+  the whole working tree). `agy_adversarial_review` also takes `threatModel`: pass it whenever
+  the user has stated an operating context, because it makes every finding label itself
+  in-model or out-of-model, and an out-of-model finding is advisory only — never a blocker,
+  never a NO_GO, never a reason to stop work in progress.
+- **Ask why something is stuck.** `agy_rescue`, whose task text goes in `problem`. It is
+  deliberately NOT isolated: a rescue
   usually needs to run commands and try things in the real tree. Use `agy_review` when you
   want an opinion that cannot touch anything.
 - **Manage background work.** `agy_status`, `agy_result`, `agy_cancel`.
@@ -76,8 +90,10 @@ code as the verdict; read `outputSummary`.
   scoped to the current workspace by default (`includeAllDirectories` widens it). It reads
   only the plugin's own job records and never runs agy, so unlike every execution tool it
   degrades rather than refusing when no workspace root is available: you get an unscoped
-  listing and a warning saying so. agy publishes no conversation listing of its own, so a
-  conversation started by a bare `agy` invocation cannot appear here.
+  listing and a warning saying so. It scans the 500 newest job records and reports how many in
+  `data.scanned`, so on a long-lived state directory an old conversation can fall outside that
+  window. agy publishes no conversation listing of its own, so a conversation started by a bare
+  `agy` invocation cannot appear here.
 
 Never invoke the `agy` CLI directly through a shell tool. A direct call bypasses the
 workspace validation, the read-only isolation, the prompt boundary, and the job record — and
@@ -136,9 +152,12 @@ seconds in the past has gone quiet, while a job still emitting events is working
 it has been running. Do not cancel on elapsed time alone — a job that runs out of budget
 keeps its conversation and can be resumed, and a cancelled one cannot.
 
-A run that produces nothing at all for 45 seconds and has completed no tool call is ended
-early as `stalled` rather than being allowed to hold the whole budget. That is a provider or
-model hang, and a larger `timeoutMs` will not help it.
+A run that has emitted under 4000 characters in total, has completed no tool call, and then
+goes silent for 45 seconds is ended early as `stalled` rather than being allowed to hold the
+whole budget. That is a provider or model hang, and a larger `timeoutMs` will not help it. All
+three conditions are required: a run that has produced real output, or has completed even one
+tool call, is left alone however long it goes quiet, because a first tool call that is a build
+or a test run looks exactly like silence.
 
 `prompt` is bounded because agy takes it as a command-line value with no stdin path. An
 oversized prompt is refused with `prompt_too_large` rather than failing inside `spawn`. Note
@@ -166,11 +185,15 @@ asking the same question fresh.
   answer. Nothing else counts as done.
 - `finalText` is agy's answer. The stdout tail is evidence, not the answer, and widening
   `maxChars` is not how to reach it — use `view: "final"` or read `outputSummary`.
-- `finalTextPartial === true` means agy wrote real text and then reported an error. The text
-  is worth reading and the run is worth resuming; it is not a finished answer.
+- `finalTextPartial === true` means the text is not a completed answer — whatever the reason.
+  It covers a run that answered and then errored, and equally a job that is still running, was
+  cancelled, or timed out with text already streamed. Read `state` to tell which. The text is
+  worth reading and the run is usually worth resuming.
 - `toolCallCount` counts completed tool calls, `filesInspected` counts distinct files opened,
-  and `evidenceLevel` grades them. A review verdict with `toolCallCount === 0` is an opinion,
-  not a review: it is never `resultComplete`, and it must not be counted as a passing vote.
+  and `evidenceLevel` grades them: `none` at zero tool calls, `substantive` at five or more
+  *and* at least one file inspected, `thin` in between. A review verdict with
+  `toolCallCount === 0` is an opinion, not a review: it is never `resultComplete`, and it must
+  not be counted as a passing vote.
 - `permissionDenied` and `deniedTargets` mean agy could not inspect what it needed. Absence
   of findings is then not evidence of correctness.
 - `structuredOutput` is present only when a run was given a JSON schema; it is validated by

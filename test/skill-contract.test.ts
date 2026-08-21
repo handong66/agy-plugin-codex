@@ -181,6 +181,79 @@ describe("skill contract: the source emits nothing the routing table omits", () 
   });
 });
 
+describe("skill contract: the docs route onto codes the runtime can actually emit", () => {
+  /**
+   * `workspace_required` shipped as a routing recommendation while every reachable
+   * path refused with `workspace_unavailable`. The mechanical completeness gate
+   * could not see it — both are members of the same union, so both appeared in both
+   * places — and neither can a static reachability rule: `buildAgyArgs` really does
+   * `throw new BoundaryError("workspace_required")`, it is just called with a
+   * constant that is never empty.
+   *
+   * So this is not a general gate, and pretending otherwise with a rule that cannot
+   * fail would be worse than nothing. It is a pin on the one fact that was wrong:
+   * the table must keep telling callers not to route on it, and the Skill must keep
+   * naming the code the runtime actually emits.
+   */
+  it("keeps workspace_required marked Reserved rather than recommended", () => {
+    const row = routing.split("\n").find((line) => line.includes("`workspace_required`"));
+    expect(row, "failure-routing.md no longer has a workspace_required row").toBeDefined();
+    expect(row!).toMatch(/Reserved/i);
+    expect(row!).toMatch(/workspace_unavailable/);
+  });
+
+  it("points the no-workspace case at workspace_unavailable, which is what is thrown", () => {
+    const tools = readFileSync(join(SRC_DIR, "tools.ts"), "utf8");
+    // The only refusal a caller with no roots can reach.
+    expect(tools).toMatch(/if \(!workspaceRoots\.length\) \{[\s\S]{0,200}?workspaceUnavailable\(/);
+    expect(tools).not.toMatch(/workspaceRequired\(/);
+
+    const claim = skill.split("\n").find((line) => line.includes("no resolvable workspace is refused"));
+    expect(claim, "SKILL.md no longer states which code a missing workspace produces").toBeDefined();
+    expect(claim!).toContain("workspace_unavailable");
+  });
+});
+
+describe("nothing claims agy is confined to the workspace it is given", () => {
+  /**
+   * The highest-stakes sentence in this repository. agy runs with its permission
+   * prompts skipped and is NOT sandboxed to `--add-dir`; it is only ever *told*
+   * about that directory. The mirror drops escaping symlinks precisely because agy
+   * would follow them, so any text claiming confinement contradicts the code next to
+   * it. This shipped in docs/privacy.md and in three `src/` strings at once.
+   */
+  const CONFINEMENT_CLAIM =
+    /(can|could)\s+(only\s+)?(read|write|see|access)[^.\n]{0,60}\b(inside|within)\b|cannot\s+(read|write|see|access)[^.\n]{0,30}\boutside\b|(unreachable|inaccessible)\s+regardless|\bis\s+sandboxed\s+to\b|fully\s+sandboxed|completely\s+isolated/i;
+
+  const SURFACES: Array<readonly [string, string]> = [
+    ["SKILL.md", skill],
+    ["failure-routing.md", routing],
+    ["src/", sourceText],
+    ...["README.md", "CHANGELOG.md", "docs/privacy.md", "docs/terms.md", "docs/development.md"].map(
+      (name) => [name, readFileSync(join(repoRoot, name), "utf8")] as const
+    )
+  ];
+
+  for (const [label, text] of SURFACES) {
+    it(`does not overclaim confinement in ${label}`, () => {
+      // Split on sentence boundaries, not lines: the sentence that overclaims and the
+      // sentence that disclaims often sit on the same line, and a line-level
+      // exclusion lets the violation exempt itself. That is exactly how the first
+      // version of this gate passed against the very text it was written to reject.
+      const offending = text
+        .split(/(?<=[.!?])\s+|\n/)
+        .map((sentence) => sentence.trim())
+        .filter((sentence) => CONFINEMENT_CLAIM.test(sentence))
+        // A sentence that says agy is NOT confined is the thing being protected.
+        .filter((sentence) => !/\bnot\b[^.]{0,40}\b(confined|sandbox)/i.test(sentence));
+      expect(
+        offending,
+        `${label} claims agy is confined to its workspace; it is only told about it`
+      ).toEqual([]);
+    });
+  }
+});
+
 describe("skill contract: the agy-specific facts are stated, not implied", () => {
   const DOCS = [
     ["SKILL.md", skill],

@@ -399,9 +399,10 @@ function validatePromptBoundary(prompt: string, allowCodexPrivatePaths?: boolean
       "private_path_blocked",
       "Prompt asks agy to read Codex private runtime paths such as ~/.codex. " +
         `First match at character ${hits[0].index}: ${JSON.stringify(hits[0].preview)}. ` +
-        "Inline the collaboration instructions in prompt instead. Note that agy could not read those paths anyway " +
-        "unless they were inside the workspace passed to --add-dir. Set allowCodexPrivatePaths only when the user " +
-        "explicitly authorizes that private path access.",
+        "Inline the collaboration instructions in prompt instead. agy is only told about the workspace passed to " +
+        "--add-dir, but it runs with permissions skipped and is not sandboxed to it, so this guard is the boundary, " +
+        "not a backstop. Set allowCodexPrivatePaths only when the user explicitly authorizes that private path " +
+        "access.",
       { hits, promptChars: prompt.length }
     );
   }

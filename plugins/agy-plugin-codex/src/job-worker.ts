@@ -354,10 +354,10 @@ async function main(): Promise<void> {
     if (record.status !== "cancelled") {
       record.status = "failed";
       // A typed refusal keeps its own code. Flattening a BoundaryError into
-      // `worker_error` costs the caller twice: `worker_error` is not in the
-      // vocabulary the Skill publishes, so nothing can route on it, and it is
-      // retryable -- which tells the caller to retry a call that provably cannot
-      // succeed until the world changes (a review outside a git repository, say).
+      // `worker_error` costs the caller twice: `worker_error` says only that
+      // something threw, which is not routable, and it is retryable -- which tells
+      // the caller to retry a call that provably cannot succeed until the world
+      // changes (a review outside a git repository, say).
       record.errorClass = isBoundaryError(error) ? error.code : "worker_error";
       record.errorMessage = error instanceof Error ? error.message : String(error);
       record.finishedAt = new Date().toISOString();

@@ -30,36 +30,62 @@ no `node_modules`. `dist/` is a tracked release artifact.
 
 ## Runtime flow
 
-### Foreground (`background: false`)
+Both paths share steps 1-3, which is deliberate: they are the checks that must not be
+reachable only from one of them.
 
 1. Resolve and **validate** the workspace: realpath, isDirectory, and inside the Codex
    workspace roots. This is not tidiness — agy silently ignores a `--add-dir` that does not
    exist and reports success, so this is the only place the mistake can be caught.
 2. Check the prompt boundary: Codex private paths, and the UTF-8 byte budget.
-3. For a review kind, build the disposable copy and fingerprint the real tree.
-4. Build the flag vector, put `-p <prompt>` on the front, spawn in its own process group.
-5. Parse the whole stream, diff the copy, rewrite mirror paths, summarise, clean up the copy.
+3. For a review kind, check that `cwd` is a git repository (`listMirrorFiles` returns null
+   otherwise). Cheap, and it makes `mirror_failed` a synchronous typed refusal on the
+   background path too, instead of a jobId that dies in the worker minutes later.
+4. Build the flag vector with `WORKSPACE_PLACEHOLDER` in the `--add-dir` slot — **on both
+   paths**, see below.
+
+### Foreground (`background: false`)
+
+5. For a review kind, build the disposable copy and fingerprint the real tree.
+6. Substitute the placeholder with the copy's path (or `cwd` for a direct run), put
+   `-p <prompt>` on the front, spawn in its own process group.
+7. Parse the whole stream, diff the copy, rewrite mirror paths, summarise, clean up the copy
+   in a `finally`.
 
 ### Background (the default)
 
-1. Steps 1 and 2 above, in the tool call.
-2. The flag vector is recorded with `WORKSPACE_PLACEHOLDER` in the `--add-dir` slot, because a
-   disposable copy does not exist until the worker builds one. The prompt is written to a
-   `0600` file rather than kept in the record.
-3. `JobStore.startAgyJob` spawns `job-worker.js` detached, `stdio: "ignore"`, and returns.
-4. The worker reads and **deletes** the prompt file, resolves the workspace (building the copy
+5. The flag vector, still carrying the placeholder, is recorded on the job. The prompt is
+   written to a `0600` file rather than kept in the record.
+6. `JobStore.startAgyJob` spawns `job-worker.js` detached, `stdio: "ignore"`, and returns.
+7. The worker reads and **deletes** the prompt file, resolves the workspace (building the copy
    for a review kind), substitutes the placeholder, and spawns agy.
-5. It streams stdout line by line through `readStreamProgress`, counting completed tool calls
+8. It streams stdout line by line through `readStreamProgress`, counting completed tool calls
    and picking up the conversation id and observed model, persisting `lastEventAt` at most
    every 10s and checking the stall rule every 5s.
-6. On exit it diffs the copy, fingerprints the real tree, rewrites mirror paths out of the
+9. On exit it diffs the copy, fingerprints the real tree, rewrites mirror paths out of the
    logs, and calls `finalizeJobRecord`.
-7. The copy is removed in a `finally`, on every path out including the throwing one.
+10. The copy is removed in a `finally`, on every path out including the throwing one. If the
+    worker throws a **typed** refusal, the record keeps that refusal's own code rather than a
+    generic `worker_error` — otherwise the caller gets a class nothing can route on, and one
+    that reads as retryable when it is not.
 
 State directory precedence: `AGY_PLUGIN_STATE_DIR`, then `$XDG_STATE_HOME/agy-plugin-codex`,
 then `~/.local/state/agy-plugin-codex`. Directories `0700`, files `0600`. Job ids match
 `^job_[A-Za-z0-9_-]{1,128}$` and **every path is derived from the validated id**, never
 trusted from the record's JSON.
+
+## Environment variables
+
+The plugin reads `AGY_BIN`, `AGY_WORKSPACE_ROOTS`, `AGY_PLUGIN_STATE_DIR`, `XDG_STATE_HOME`,
+`CODEX_THREAD_ID`, `CODEX_HOME`, `HOME`, `PATH` and the proxy/TLS variables agy itself obeys.
+All of those are allowlisted in `.mcp.json`, and `scripts/validate-plugin.mjs` fails the build
+if one of the load-bearing ones goes missing from that list.
+
+One is read and deliberately **not** allowlisted: `AGY_PLUGIN_WORKER_PATH`, which overrides
+the path of the background worker. It exists so a test can point the store at a worker other
+than the bundled one. Allowlisting it would let a caller's environment choose which executable
+the plugin spawns detached, which is a strictly worse trade than making tests set it in the
+process they already control. If you add a new variable the plugin reads, decide which of
+these two shapes it is before adding it to `.mcp.json`.
 
 ## Why the worker owns the mirror
 
@@ -71,6 +97,13 @@ records only the intent (`workspaceMode: "mirror"`) plus the real repository pat
 That is also why the argv carries a placeholder rather than a path, and why `toPublicJob`
 excludes `args`: the argv names a temp directory that the caller cannot open and that will not
 exist by the time they read the record.
+
+The placeholder is used on **both** paths even though a foreground run could resolve its
+workspace immediately. It briefly was not, and that was a real defect: `runOrStartJob` baked
+`cwd` into `--add-dir` for `background: false`, `runForeground`'s substitution became a no-op,
+and a synchronous `agy_review` ran agy against the live working tree while still building and
+discarding a copy it never used. One code path, one substitution point, and both `tools.ts`
+and `job-worker.ts` now throw rather than spawn if a placeholder survives.
 
 ## The record is monotonic
 
@@ -133,6 +166,12 @@ with an **empty stderr** and the whole explanation inside the result document.
   link or one that climbs out is dropped, because it would be a writable door back into the
   real repository.
 
+`rewriteMirrorPaths` sorts its path variants **longest-first**, and that ordering is
+load-bearing rather than tidy. On macOS `mkdtemp` yields `/var/folders/...` while agy reports
+the realpath `/private/var/folders/...`, and the short spelling is a strict prefix of the long
+one: replacing it first rewrote every cited path to `/private<repoRoot>/...`, which points
+nowhere.
+
 ## Refreshing an installed plugin
 
 1. `npm run build`
@@ -150,7 +189,9 @@ core loop:
 ```bash
 npm run typecheck
 npx vitest run <file>
-npm run check
+npm run validate:plugin   # manifest, .mcp.json allowlist, version gate
+npm run smoke:mcp         # the published tool schemas, over real stdio
+npm run check             # all of the above plus the full suite
 ```
 
 Tests drive a fake `agy` on `AGY_BIN` — a throwaway `.mjs` written into a temp directory whose

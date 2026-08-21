@@ -29,6 +29,13 @@ level — `background`, `terminal`, `nextAction`, `waited`, `resumable`, `agyCon
 
 Returned, never thrown. All are `retryable: false` except `cli_probe_timeout`.
 
+A boundary refusal normally arrives synchronously, on the call that made the mistake — every
+input check (`cwd`, prompt size, private paths, model id, and the git-repository pre-check for
+a review) runs before a job is created, so those codes never reach a job record. One route can
+still deliver a typed refusal later: if a background worker hits one after the job was
+accepted, the job's `errorClass` carries that same code rather than a generic one. In practice
+`mirror_failed` is the only code that takes that route.
+
 | code | What to do |
 | --- | --- |
 | `cli_not_found` | Install the Antigravity CLI (`brew install --cask antigravity-cli`) or set `AGY_BIN` to its path. |
@@ -84,7 +91,8 @@ They are deliberately path-free: they say which source was unusable, never what 
 | `agy_failed` | yes | agy exited without a usable result and gave a reason this table does not classify. The run document's `error` field is the evidence. |
 | `unknown` | yes | Clean exit, empty channels, no result. Rerun with a narrower task. |
 | `spawn_error` | yes | The process could not be started at all. |
-| `worker_error` | yes | The background worker itself threw. Its message is on the record. |
+| `worker_error` | yes | The background worker threw something that is not a typed refusal. Its message is on the record. A typed refusal keeps its own code instead — see "Boundary refusals" above. |
+| `mirror_failed` | no | The disposable copy could not be built. The submit-time pre-check catches the usual cause (not a git repository), so reaching a record means the copy failed after the job was accepted. Same remedy as the boundary row. |
 | `worker_unavailable` | yes | The worker exited without recording a terminal result. The job's outcome is lost; rerun it. |
 | `cancelled` | yes | `agy_cancel` ended it. The conversation was abandoned mid-turn. |
 

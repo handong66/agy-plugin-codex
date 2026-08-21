@@ -27,6 +27,13 @@ Boundary refusals come back as that same envelope with `ok: false` and a typed
 `model_not_found`. All are `retryable: false` except `cli_probe_timeout`. Never work around
 one by calling the `agy` CLI directly — see the warning under "Choose a tool".
 
+Those codes normally arrive synchronously: every input check runs before a job is created, so
+they come back on the submitting call rather than on a job record. One route delivers a typed
+refusal later — a background worker that hits one after the job was accepted files that same
+code as the job's `errorClass`, so `agy_status` and `agy_result` can hand you a boundary code
+too, with the same meaning and the same `retryable` value. `mirror_failed` is the only code
+that takes that route in practice.
+
 `references/failure-routing.md` is the complete failure and polling table, vendored with the
 plugin so it cannot be a release behind the code. A test fails the build in both directions
 if a code exists in one and not the other.
@@ -65,7 +72,12 @@ code as the verdict; read `outputSummary`.
   usually needs to run commands and try things in the real tree. Use `agy_review` when you
   want an opinion that cannot touch anything.
 - **Manage background work.** `agy_status`, `agy_result`, `agy_cancel`.
-- **Recover a lost handle.** `agy_conversations` lists the conversations this plugin started.
+- **Recover a lost handle.** `agy_conversations` lists the conversations this plugin started,
+  scoped to the current workspace by default (`includeAllDirectories` widens it). It reads
+  only the plugin's own job records and never runs agy, so unlike every execution tool it
+  degrades rather than refusing when no workspace root is available: you get an unscoped
+  listing and a warning saying so. agy publishes no conversation listing of its own, so a
+  conversation started by a bare `agy` invocation cannot appear here.
 
 Never invoke the `agy` CLI directly through a shell tool. A direct call bypasses the
 workspace validation, the read-only isolation, the prompt boundary, and the job record — and
@@ -84,6 +96,8 @@ Three consequences to hold onto:
 
 - **The copy is built from git's file list**, so these tools need a git repository and fail
   with `mirror_failed` outside one. There is no fallback that copies an arbitrary directory.
+  The check happens at submission, so a background review outside a repository refuses
+  immediately with that code rather than handing you a jobId that dies later.
 - **Files git ignores are absent** — `node_modules`, build output, `.env`. A finding that
   amounts to "this import does not resolve" or "this file is missing" is an artifact of the
   copy, not a defect. The reviewer is told this in its own prompt, but check anyway.

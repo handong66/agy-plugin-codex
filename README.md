@@ -63,7 +63,9 @@ Important parameters and boundaries:
 - **`effort`** is `low`/`medium`/`high`, agy's reasoning dial.
 - **`conversationId`** resumes. agy does *not* fail on an id it cannot find: it warns, exits
   0, and starts a fresh conversation with none of the earlier context. This plugin compares
-  the id that came back and reports `conversation_not_found` in `warnings`.
+  the id that came back and reports `conversation_not_found` in `warnings`. Note also that
+  agy's `num_turns` and token usage are cumulative over a conversation, so a long resume chain
+  costs more and runs slower than asking the same question fresh.
 - **`threatModel`** on the adversarial review labels findings in-model or out-of-model.
   Out-of-model findings are advisory and never blockers.
 - **`allowCodexPrivatePaths`** is the only way past the `~/.codex` prompt guard, and it is not
@@ -91,7 +93,8 @@ which it should not have been able to cause.
 Three limits, stated rather than buried:
 
 - The copy is built from git's file list, so these tools need a **git repository** and refuse
-  with `mirror_failed` outside one. There is no fallback that copies an arbitrary directory.
+  with `mirror_failed` outside one — synchronously, on the submitting call, even in background
+  mode. There is no fallback that copies an arbitrary directory.
 - **Files git ignores are absent** — `node_modules`, build output, `.env`. The reviewer is
   told this in its own prompt, so it should not report a missing dependency as a finding.
 - **This protects the repository, not the whole filesystem.** agy still writes to
@@ -146,7 +149,21 @@ own Antigravity account.
 - **Node.js 22 or later**, and **git** for the read-only reviews.
 - macOS or Linux.
 
-## Install from this repository
+## Configuration
+
+Everything is optional; the plugin works with none of these set.
+
+| Variable | What it does |
+| --- | --- |
+| `AGY_BIN` | Path to the agy binary, when it is not on `PATH`. An explicitly configured binary is trusted once it is executable. |
+| `AGY_WORKSPACE_ROOTS` | `PATH`-separated absolute directories to accept as workspace roots. This is the escape hatch when Codex advertises no roots for a call and you cannot pass an explicit `cwd` — without any root, execution tools refuse, because agy has no process-cwd fallback to land in. |
+| `AGY_PLUGIN_STATE_DIR` | Moves the private job state directory. Defaults to `$XDG_STATE_HOME/agy-plugin-codex`, then `~/.local/state/agy-plugin-codex`. |
+
+The proxy and TLS variables agy itself obeys (`HTTPS_PROXY`, `NO_PROXY`, `NODE_EXTRA_CA_CERTS`,
+…) are passed through unchanged, and `agy_check` reports which of them are in effect with any
+credentials masked.
+
+## Install
 
 ```bash
 git clone https://github.com/handong66/agy-plugin-codex
@@ -155,7 +172,25 @@ npm ci
 npm run build
 ```
 
-Then add the marketplace in Codex from this checkout and install `agy-plugin-codex`.
+Register the checkout as a local marketplace and install from it:
+
+```bash
+codex plugin marketplace add "$PWD"
+```
+
+```bash
+codex plugin add agy-plugin-codex@agy-plugin-codex
+```
+
+`codex plugin list` should then show `agy-plugin-codex@agy-plugin-codex  installed, enabled`.
+The `npm run build` step is not optional: an installed plugin has no build step of its own, so
+Codex runs the bundles in `dist/` directly.
+
+To remove it:
+
+```bash
+codex plugin remove agy-plugin-codex@agy-plugin-codex && codex plugin marketplace remove agy-plugin-codex
+```
 
 ## Development and verification
 

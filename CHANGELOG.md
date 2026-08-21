@@ -95,6 +95,15 @@ reported as a finding.
 `npm run check` runs typecheck, the esbuild bundle, the full vitest suite, repository plugin
 validation, and an MCP schema smoke that needs no agy account. CI runs it on ubuntu-latest and
 macos-latest, because the plugin spawns detached workers and signals process groups and that
-is exactly where the two platforms differ. `npm run smoke:agy-cli` checks the real CLI still
-has the ten flags this design rests on; `npm run smoke:live-agy` spends real quota to prove
+is exactly where the two platforms differ.
+
+Three further gates need the real CLI and are opt-in. `npm run smoke:agy-cli` checks agy still
+has the ten flags this design rests on. `npm run smoke:live-agy` spends real quota to prove
 `--add-dir` targets the workspace and a read-only review leaves the repository untouched.
+`npm run smoke:live-full` drives all ten tools against a real account — including a resume
+onto a conversation id that does not exist, which is the check that proves the
+`conversation_not_found` guard fires against the real CLI rather than only against a fixture.
+All eleven of its checks pass.
+
+The plugin has also been installed and exercised in a real Codex session; the recorded output
+of every gate is in `docs/verification.md`.

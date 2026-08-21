@@ -12,13 +12,16 @@ behaviour; `skills/agy/SKILL.md` is what a caller should read.
   process working directory, and a non-existent `--add-dir` fails silently, so the path is
   validated before anything is spawned.
 - Runs are write-capable, because agy has no read-only permission mode. The two review tools
-  isolate by giving agy a disposable copy of the working tree instead.
+  isolate by giving agy a disposable copy of the working tree instead; that copy is built from
+  git's file list, so they need a git repository and refuse with `mirror_failed` outside one.
 - Background by default; state is private, restart-safe, and projected before it crosses the
   wire.
 - `timeoutMs` 10000..86400000, default 600000, clamped to 240000 in the foreground.
 - Only `outputSummary.resultComplete === true` means agy finished. A review verdict with zero
   tool calls is an opinion, not a review.
 - The model that answered is observed from the run, never predicted from configuration.
+- A resume onto an unknown conversation id is detected and reported: agy answers that with
+  exit 0 and success from a fresh conversation carrying none of the earlier context.
 - Codex remains the final owner of every change.
 
 ## Tools

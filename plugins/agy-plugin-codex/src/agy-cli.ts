@@ -1133,6 +1133,8 @@ export function agyFailureMessage(errorClass: string): string {
       return "agy exceeded its wall-clock budget.";
     case "stalled":
       return "agy produced no output at all for the stall window, which is a provider or model hang rather than slow work. Retry with a lighter explicit model, or check the provider and proxy configuration.";
+    case "agy_canceled":
+      return "agy 1.1.18 reported terminal status CANCELED, and the run produced no usable result. Because the same prompt was observed reaching SUCCESS, ERROR, and CANCELED on agy 1.1.18, the outcome is nondeterministic across runs, so a retry is reasonable before changing the request.";
     case "agy_failed":
       return "agy exited without a usable final result. The run document's `error` field is the evidence; if it is empty too, re-run with a narrower task.";
     default:

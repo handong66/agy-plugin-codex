@@ -88,6 +88,7 @@ They are deliberately path-free: they say which source was unusable, never what 
 | `rate_limited` | yes | Transient. Wait and re-run the same request unchanged. |
 | `network_error` | yes | agy could not reach its provider. Check network, proxy and certificates. |
 | `provider_error` | yes | A server-side error worth retrying once. If it repeats, switch model rather than rewording. |
+| `agy_canceled` | yes | agy 1.1.18 reported terminal status `CANCELED` with no usable result. On agy 1.1.18, the same prompt was measured reaching `SUCCESS`, `ERROR`, and `CANCELED`, so retry once before changing the request. |
 | `agy_failed` | yes | agy exited without a usable result and gave a reason this table does not classify. The run document's `error` field is the evidence. |
 | `unknown` | yes | Clean exit, empty channels, no result. Rerun with a narrower task. |
 | `spawn_error` | yes | The process could not be started at all. |

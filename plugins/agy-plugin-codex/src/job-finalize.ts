@@ -130,7 +130,8 @@ export function finalizeJobRecord(params: FinalizeJobParams): JobRecord {
   }
 
   // agy's own verdict, which is where the reason for a failure actually lives.
-  const runErrored = parsed?.status === "ERROR" || Boolean(parsed?.errorText);
+  const runCanceled = parsed?.status === "CANCELED";
+  const runErrored = parsed?.status === "ERROR" || runCanceled || Boolean(parsed?.errorText);
   const processFailed = outcome.exitCode !== 0 || Boolean(outcome.signal);
   if (!runErrored && !processFailed) {
     latest.status = "succeeded";
@@ -141,12 +142,14 @@ export function finalizeJobRecord(params: FinalizeJobParams): JobRecord {
   }
 
   latest.status = "failed";
-  latest.errorClass = classifyAgyFailure({
-    signal: outcome.signal,
-    exitCode: outcome.exitCode,
-    stderr,
-    errorText: parsed?.errorText
-  });
+  latest.errorClass = runCanceled
+    ? "agy_canceled"
+    : classifyAgyFailure({
+        signal: outcome.signal,
+        exitCode: outcome.exitCode,
+        stderr,
+        errorText: parsed?.errorText
+      });
   latest.resumable = Boolean(latest.agyConversationId);
   latest.errorMessage = failureMessage(latest.errorClass, {
     exitCode: outcome.exitCode,

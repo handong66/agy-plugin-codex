@@ -17,6 +17,7 @@ function fixture(name: string): string {
 const SUCCESS = fixture("agy-run-success.jsonl");
 const ANSWERED_THEN_ERRORED = fixture("agy-answered-then-errored.jsonl");
 const PRINT_TIMEOUT = fixture("agy-print-timeout.jsonl");
+const CANCELED = fixture("agy-run-canceled.jsonl");
 
 const SUCCESS_CONVERSATION_ID = "5347faf1-5d39-4a25-8034-502a185fdaf4";
 const ERRORED_CONVERSATION_ID = "1f2e3d4c-0000-4000-8000-abcdefabcdef";
@@ -135,6 +136,22 @@ describe("a spawn failure is about this machine, not about agy", () => {
 });
 
 describe("exit code 0 is not agy's verdict", () => {
+  it("fails a measured agy 1.1.18 CANCELED run with exit 0, no error text, and an empty response", () => {
+    const finalized = finalize({
+      stdout: CANCELED,
+      stderr: "",
+      outcome: { exitCode: 0, signal: null }
+    });
+
+    expect(finalized.status).toBe("failed");
+    expect(finalized.exitCode).toBe(0);
+    expect(finalized.errorClass).toBe("agy_canceled");
+    expect(finalized.errorMessage).toContain("agy exited with code 0.");
+    expect(finalized.terminalSummary?.state).toBe("failed_partial");
+    expect(finalized.terminalSummary?.resultComplete).toBe(false);
+    expect(finalized.terminalSummary?.finalTextPreview).toBeUndefined();
+  });
+
   it("fails a run that exited 0 while its own result document said status ERROR", () => {
     // The agy-specific rule this whole branch exists for. Measured: agy reports its
     // own outcome in the result document's `status`, its reason in `error`, and

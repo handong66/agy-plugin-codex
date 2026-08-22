@@ -12,6 +12,67 @@ A first pass against 1.1.15 lives in the sibling project `agy-plugin-cc`; sectio
 Probes ran in a throwaway `git init` directory, sequentially, with
 `--model gemini-3.7-flash-low --print-timeout 90s`.
 
+## 2026-08-22 re-probe — agy 1.1.18 on macOS arm64
+
+These agy 1.1.18 measurements supplement the agy 1.1.16 record below rather than replacing it.
+
+### Permissions without `--dangerously-skip-permissions`
+
+In agy 1.1.18, headless runs without `--dangerously-skip-permissions` report
+`init.permission_mode: "request-review"`, permit reads, and deny writes.
+
+- Across five agy 1.1.18 read probes, `view_file` moved from `ACTIVE` to `DONE` in all five.
+- The response contained the sentinel in exactly three of the five agy 1.1.18 read probes,
+  all and only those whose terminal status was `SUCCESS`.
+- Across four agy 1.1.18 write probes, the requested file was never created; an `ERROR`
+  outcome carried `permission check failed for write_file "<path>"`.
+- In agy 1.1.18, `--sandbox` also permitted the measured read and returned the sentinel with
+  terminal status `SUCCESS`.
+
+The isolation rationale and failure-classification wording derived from the agy 1.1.16
+permission finding have not yet been revisited for agy 1.1.18; that remains open work.
+
+### A third terminal status and non-deterministic outcomes
+
+In agy 1.1.18, `CANCELED` is a third terminal status, and the measured `CANCELED` runs exited 0.
+
+| agy 1.1.18 run | prompt | exit | status | tool states | file written |
+| --- | --- | --- | --- | --- | --- |
+| write rep1 | create a file | 1 | `ERROR` | `ACTIVE`, `ERROR` | no |
+| write rep2 | create a file | 1 | `ERROR` | `ACTIVE`, `ERROR` | no |
+| write rep3 | create a file | 0 | `CANCELED` | `ACTIVE`, `DONE` | no |
+| read rep1 | read marker | 0 | `SUCCESS` | `view_file DONE` | n/a |
+| read rep2 | read marker | 0 | `CANCELED` | `run_command DONE` | n/a |
+| read rep3 | read marker | 1 | `ERROR` | `run_command ERROR` | n/a |
+
+In agy 1.1.18, the same prompt was non-deterministic across `SUCCESS`, `ERROR`, and `CANCELED`.
+
+### Tool-step states
+
+In agy 1.1.18, a denied `write_to_file` emitted tool-step state `ERROR`, so the agy 1.1.16
+observation of only `ACTIVE` and `DONE` is not current for this build.
+
+In agy 1.1.18, tool-step state `DONE` means that the step ended, not that it succeeded: a denied
+`write_to_file` reported `DONE` in a `CANCELED` run, and the requested file was never created.
+
+### Exit 0 and the silent workspace failure
+
+In agy 1.1.18, a non-existent `--add-dir` still produces exit 0, terminal status `SUCCESS`, empty
+stderr, no warning, and no work in the requested workspace.
+
+In agy 1.1.18, exit 0 therefore covers `SUCCESS`, `CANCELED`, and the silent wrong-workspace
+failure; exit 0 does not establish that the requested work happened.
+
+### Drift gate
+
+Measured claims in this document are version-scoped. The repository drift gate checks
+documentation identifiers against source at `test/skill-contract.test.ts:101` and source failure
+codes against the routing table at `test/skill-contract.test.ts:112`; it does not re-probe
+external-runtime behaviour. Pinning measured prose verbatim at
+`test/skill-contract.test.ts:268` and `test/skill-contract.test.ts:272` turns an aging observation
+into an enforced invariant and makes a later correction harder. A behavioural drift check would
+need to re-probe a pinned agy build rather than treat prose as an identifier contract.
+
 ---
 
 ## 1. Invocation
@@ -109,8 +170,10 @@ isolation instead — §6.
 On failure, `status` is `"ERROR"` and an `error` string is present. `structured_output` and
 `json_schema` appear only with `--json-schema` (§7).
 
-*(new in 1.1.16)* **Exit codes: 0 on `SUCCESS`, 1 on `ERROR`**, observed across every failure
-mode probed. That makes the exit code a cheap pre-check — but not the verdict, see below.
+*(new in agy 1.1.16)* **Exit codes were observed as 0 on `SUCCESS` and 1 on `ERROR`** across every
+agy 1.1.16 failure mode probed. This is not current for agy 1.1.18: in agy 1.1.18, exit 0 covers
+`SUCCESS`, `CANCELED`, and the silent wrong-workspace failure, so exit 0 does not establish that
+the requested work happened.
 
 `--output-format stream-json` writes NDJSON. Exactly three event names exist: `init`,
 `step_update`, `result`. Each line is `{"event":"<name>", ..., "<name>":{...}}` — the payload

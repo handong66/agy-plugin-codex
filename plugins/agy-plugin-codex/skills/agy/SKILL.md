@@ -58,9 +58,13 @@ path; route on `workspace_unavailable`.)
 call unless permissions are skipped wholesale; `--sandbox` does not help, and plan mode
 refuses reads and shell commands too. There is no flag that grants read and withholds write.
 
-**agy reports its own outcome independently of its exit code.** A run can exit 0 and report
-`status: "ERROR"`, or report `ERROR` while carrying a substantial answer. Never read the exit
-code as the verdict; read `outputSummary`.
+The isolation rationale and failure-classification wording derived from the agy 1.1.16
+permission finding have not yet been revisited for agy 1.1.18; that remains open work.
+
+**agy 1.1.18 reports its own outcome independently of its exit code.** In agy 1.1.18, exit 0
+covers `SUCCESS`, `CANCELED`, and silent wrong-workspace `SUCCESS`, so exit 0 does not establish
+that the requested work happened. For agy 1.1.18, read `outputSummary`, not the exit code, as
+the verdict.
 
 ## Choose a tool
 

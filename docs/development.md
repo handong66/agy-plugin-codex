@@ -145,10 +145,11 @@ thinner than it was, which is the safe direction.
 
 ## Outcome classification
 
-`exitCode === 0` is not the verdict. The finalizer's branch order is cancellation, stall,
-timeout, spawn error, then agy's own `status`/`error` from the run document. A run that exits
-0 with `status: "ERROR"` is a failure; a run with `status: "ERROR"` and real text is
-`failed_with_partial_text`, with the text preserved and marked partial.
+For agy 1.1.18, exit 0 covers `SUCCESS`, `CANCELED`, and silent wrong-workspace `SUCCESS`, so
+`exitCode === 0` does not establish that the requested work happened. The finalizer checks
+cancellation, stall, timeout, spawn failure, then the structured terminal evidence
+(`plugins/agy-plugin-codex/src/job-finalize.ts:94`); failed runs with real text are preserved as
+`failed_with_partial_text` (`plugins/agy-plugin-codex/src/job-store.ts:430`).
 
 Only real error channels are classified: the process outcome, the run document's `error`
 field, and stderr. agy's answer text is never part of the haystack — a review that mentions a

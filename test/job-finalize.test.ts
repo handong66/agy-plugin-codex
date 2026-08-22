@@ -153,10 +153,12 @@ describe("exit code 0 is not agy's verdict", () => {
   });
 
   it("fails a run that exited 0 while its own result document said status ERROR", () => {
-    // The agy-specific rule this whole branch exists for. Measured: agy reports its
-    // own outcome in the result document's `status`, its reason in `error`, and
-    // leaves stderr EMPTY -- so a finalizer that trusted the exit code would file
-    // this run as a success.
+    // Measured on agy 1.1.16: agy 1.1.16 reported its own outcome in the result
+    // document's `status`, its reason in `error`, and left stderr EMPTY. The agy
+    // 1.1.18 re-probe did not reproduce this exit-0/ERROR pairing; the assertion
+    // below still guards the plugin terminal-status decision at
+    // `plugins/agy-plugin-codex/src/job-finalize.ts:133` rather than claiming
+    // current agy 1.1.18 behaviour.
     const finalized = finalize({
       stdout: ANSWERED_THEN_ERRORED,
       stderr: "",

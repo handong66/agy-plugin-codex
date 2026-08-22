@@ -562,7 +562,8 @@ server.registerTool(
       "Read stdout/stderr tail and outputSummary for a background agy job. outputSummary.finalText is agy's answer " +
       "and the stdout tail is evidence, not the answer. Only outputSummary.resultComplete means agy finished and " +
       "produced it; finalText can also be present with finalTextPartial true, which is a run that answered and then " +
-      "hit an error -- agy reports its own status independently of its exit code.",
+      "hit an error. In agy 1.1.18, exit 0 covers SUCCESS, CANCELED, and silent wrong-workspace SUCCESS, so exit 0 " +
+      "does not establish that the requested work happened.",
     inputSchema: {
       jobId: jobIdSchema,
       waitMs: waitMsSchema,

@@ -40,6 +40,11 @@ change the design rather than decorate it:
   classification reads the run document, never the exit code alone, and a run that answered
   and then failed is surfaced as `failed_with_partial_text` with its text intact.
 
+  **Correction (2026-08-22, measured against agy 1.1.18):** The exit-0-with-`ERROR` example
+  above was not reproducible on agy 1.1.18; all four agy 1.1.18 `ERROR` probes exited 1. In agy
+  1.1.18, exit 0 instead covers `SUCCESS`, `CANCELED`, and silent wrong-workspace `SUCCESS`, so
+  exit 0 does not establish that the requested work happened.
+
 ### Read-only reviews are a filesystem guarantee
 
 agy has no read-only permission mode: headless runs auto-deny every tool call unless

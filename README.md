@@ -32,10 +32,10 @@ either — it refuses reads and shell commands as well as writes, and works out 
 directory. There is no flag that grants read and withholds write, so a "read-only" review had
 to be built a different way (below).
 
-**agy reports its own outcome independently of its exit code.** A run can exit 0 and report
-`status: "ERROR"`, or report `ERROR` while carrying a substantial answer — that second case is
-real and measured, an agent that answered and then tripped a permission boundary on a
-follow-up call. Nothing here reads the exit code as the verdict.
+**agy 1.1.18 reports its own outcome independently of its exit code.** In agy 1.1.18, exit 0
+covers `SUCCESS`, `CANCELED`, and silent wrong-workspace `SUCCESS`, so exit 0 does not establish
+that the requested work happened. Read the structured outcome and evidence, not the exit code,
+as the verdict for agy 1.1.18.
 
 ## Tools
 

@@ -47,13 +47,14 @@ the repository's `docs/AGY-RUNTIME-CONTRACT.md` carries the probes
 (<https://github.com/handong66/agy-plugin-codex/blob/main/docs/AGY-RUNTIME-CONTRACT.md>; it is
 not shipped inside the installed plugin).
 
-**The agy 1.1.16 workspace probe found that a run cannot see a directory it was not given.**
-agy 1.1.16 ignored the process working directory; without `--add-dir` it operated inside
-`~/.gemini/antigravity-cli` and saw none of the repository. In agy 1.1.18, a nonexistent
-`--add-dir` still exited 0 with silent wrong-workspace `SUCCESS`. So `cwd` is not a
-convenience here, and a call with no resolvable workspace is refused with
-`workspace_unavailable` rather than run. (`workspace_required` exists in the vocabulary as
-an internal guard and has no runtime path; route on `workspace_unavailable`.)
+**A run cannot see a directory it was not given.**
+agy ignores the process working directory: measured on 1.1.16 it operated inside
+`~/.gemini/antigravity-cli` without `--add-dir`, and on 1.1.18 a nonexistent `--add-dir`
+still exited 0 with a silent wrong-workspace `SUCCESS` instead of falling back to the
+shell's directory. So `cwd` is not a convenience here, and
+a call with no resolvable workspace is refused with `workspace_unavailable` rather than run.
+(`workspace_required` exists in the vocabulary as an internal guard and has no runtime
+path; route on `workspace_unavailable`.)
 
 **In agy 1.1.18, any denied tool call terminates the run and clears the answer.**
 `request-review` can permit ordinary-file reads while denying writes, but agy chooses the

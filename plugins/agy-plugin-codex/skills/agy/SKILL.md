@@ -47,19 +47,19 @@ the repository's `docs/AGY-RUNTIME-CONTRACT.md` carries the probes
 (<https://github.com/handong66/agy-plugin-codex/blob/main/docs/AGY-RUNTIME-CONTRACT.md>; it is
 not shipped inside the installed plugin).
 
-**agy cannot see a directory it was not given.** It ignores the process working directory
-entirely; without `--add-dir` it operates inside `~/.gemini/antigravity-cli` and sees none of
-the repository. So `cwd` is not a convenience here, it is the whole of what a run can reach,
-and a call with no resolvable workspace is refused with `workspace_unavailable` rather than
-run. (`workspace_required` exists in the vocabulary as an internal guard and has no runtime
-path; route on `workspace_unavailable`.)
+**The agy 1.1.16 workspace probe found that a run cannot see a directory it was not given.**
+agy 1.1.16 ignored the process working directory; without `--add-dir` it operated inside
+`~/.gemini/antigravity-cli` and saw none of the repository. In agy 1.1.18, a nonexistent
+`--add-dir` still exited 0 with silent wrong-workspace `SUCCESS`. So `cwd` is not a
+convenience here, and a call with no resolvable workspace is refused with
+`workspace_unavailable` rather than run. (`workspace_required` exists in the vocabulary as
+an internal guard and has no runtime path; route on `workspace_unavailable`.)
 
-**agy cannot read without also being able to write.** Headless runs auto-deny every tool
-call unless permissions are skipped wholesale; `--sandbox` does not help, and plan mode
-refuses reads and shell commands too. There is no flag that grants read and withholds write.
-
-The isolation rationale and failure-classification wording derived from the agy 1.1.16
-permission finding have not yet been revisited for agy 1.1.18; that remains open work.
+**In agy 1.1.18, any denied tool call terminates the run and clears the answer.**
+`request-review` can permit ordinary-file reads while denying writes, but agy chooses the
+targets it rejects. In the 2026-08-22 E1 probe, agy 1.1.18 denied a read of `.env`; all three
+runs failed even though the prompt forbade shell use. A dependable review therefore has to
+avoid permission denials, not merely ask the model to avoid particular tools.
 
 **agy 1.1.18 reports its own outcome independently of its exit code.** In agy 1.1.18, exit 0
 covers `SUCCESS`, `CANCELED`, and silent wrong-workspace `SUCCESS`, so exit 0 does not establish
@@ -75,9 +75,9 @@ the verdict.
   life of the server process; `force: true` re-reads it. Call it at the start of a batch, not
   before every task.
 - **Delegate work.** `agy_run` for a task, `agy_continue` (which needs a `conversationId`) to
-  carry one on. Both are **write-capable in `cwd`** — that is not a setting, it is the only
-  mode agy has. Both accept `allowCodexPrivatePaths`, which only widens what the prompt may
-  mention and grants agy nothing.
+  carry one on. Both are **write-capable in `cwd`** because this plugin runs agy 1.1.18 with
+  permission prompts skipped. Both accept `allowCodexPrivatePaths`, which only widens what
+  the prompt may mention and grants agy nothing.
 - **Review without risk to the repository.** `agy_review` and `agy_adversarial_review` give
   agy a disposable copy of the working tree and never tell it the repository's path. See
   "Read-only means the filesystem". Both take `target` (what to review, in words — default is
@@ -108,9 +108,13 @@ directory and reports success.
 
 `agy_review` and `agy_adversarial_review` are read-only in a specific, checkable sense: agy
 is handed a throwaway copy of the working tree and is never given the repository's path, so
-nothing it does can reach your files. That is a filesystem guarantee, not a promise about
-model behaviour, and it is the only honest one available given that agy has no read-only
-mode.
+nothing it does can reach your files. The mirror is not compensating for absent read/write
+separation: agy 1.1.18 `request-review` can permit ordinary reads while denying writes. It
+instead removes the fatal permission gate measured in E1. The plugin runs agy 1.1.18 with
+permissions skipped against the throwaway copy, preventing `request-review` from erasing a
+partial answer, while withholding the repository's real path keeps the working tree outside
+the reviewer's disclosed workspace. That boundary does not depend on which calls agy 1.1.18
+chooses to deny.
 
 Three consequences to hold onto:
 
@@ -121,11 +125,11 @@ Three consequences to hold onto:
 - **Files git ignores are absent** — `node_modules`, build output, `.env`. A finding that
   amounts to "this import does not resolve" or "this file is missing" is an artifact of the
   copy, not a defect. The reviewer is told this in its own prompt, but check anyway.
-- **Isolation protects the repository, not the whole filesystem.** agy still writes to
-  `~/.gemini/antigravity-cli` on every run. If a review reports that it fixed something, it
-  did not: `data.isolation.warnings` will carry `readonly_run_wrote_files` naming what it
-  changed inside the copy that was then deleted. Re-run it with `agy_run` to apply a change
-  for real.
+- **Isolation protects the repository, not the whole filesystem.** The agy 1.1.16 probes
+  observed writes to `~/.gemini/antigravity-cli`. If a review reports that it fixed
+  something, it did not: `data.isolation.warnings` will carry `readonly_run_wrote_files`
+  naming what it changed inside the copy that was then deleted. Re-run it with `agy_run` to
+  apply a change for real.
 
 `data.isolation.warnings` may also carry `tree_changed_during_readonly_run`. That one means
 the real tree or HEAD moved while an isolated review was running, which the review should not

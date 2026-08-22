@@ -251,8 +251,8 @@ describe("the argv agy actually receives", () => {
     // --add-dir is the ONLY thing that decides what a run can see: agy ignores the
     // process working directory entirely (AGY-RUNTIME-CONTRACT.md §2).
     expect(flagValue(flags, "--add-dir")).toBe(workspace);
-    // Without this every tool call is auto-denied and the run ends ERROR having
-    // done nothing (§3).
+    // In agy 1.1.18 E1, a denied tool call terminated the run and cleared its
+    // answer; this flag avoids that permission gate (§3).
     expect(flags).toContain("--dangerously-skip-permissions");
     // stream-json is the only format whose init event names the model that ran and
     // whose step_update events name each tool call (§5, §5a).
@@ -262,7 +262,7 @@ describe("the argv agy actually receives", () => {
     expect(flags).toContain("--disable-slash-commands");
   });
 
-  it("passes --mode accept-edits for a run, because a write-capable run is the only mode agy has", async () => {
+  it("passes --mode accept-edits for a direct write-capable run", async () => {
     const workspace = await useWorkspace();
     const invocations = await useInvocationsFile();
 
@@ -308,8 +308,8 @@ describe.skipIf(!hasGit)("agy_review points agy at a disposable copy, never the 
     // anything, so the value has to be a real absolute path of its own.
     expect(addDir).not.toBe(WORKSPACE_PLACEHOLDER);
     expect(isAbsolute(addDir)).toBe(true);
-    // agy has no read-only permission mode (§3): the isolation IS the workspace, so
-    // the repository's path must never appear on the command line.
+    // agy 1.1.18 E1 showed that a permission denial terminates a run and clears its
+    // answer (§3); the mirror avoids that gate, so the repository path must not leak.
     expect(addDir).not.toBe(repo);
     expect(addDir.startsWith(`${repo}${sep}`)).toBe(false);
     // --mode accept-edits is deliberately absent on a review; the copy is what makes

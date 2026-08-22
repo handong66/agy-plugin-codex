@@ -401,8 +401,8 @@ export type BuildAgyArgsParams = {
   continueLatest?: boolean;
   /**
    * A read-only run is one whose `workspace` is a disposable copy. The flag only
-   * suppresses `--mode accept-edits`; it grants nothing, because agy cannot
-   * separate read permission from write permission (see the note below).
+   * suppresses `--mode accept-edits`; the plugin still skips permission prompts,
+   * so agy 1.1.18 remains write-capable inside that disposable copy (see below).
    */
   readOnly?: boolean;
   jsonSchemaFile?: string;
@@ -417,24 +417,23 @@ export type BuildAgyArgsParams = {
  * "simplify" away later, so both are justified at the call site.
  *
  *   --add-dir <workspace>
- *     agy does NOT use the process working directory. Measured: launched from a
- *     repository without --add-dir, agy reported its working directory as
+ *     In the agy 1.1.16 workspace measurement, a launch without --add-dir used
  *     ~/.gemini/antigravity-cli, could not see the repository's files, and created
  *     a file in its own state directory. --add-dir is the only thing that decides
  *     what a run can see, which is also why read-only runs are handed a throwaway
  *     copy here rather than a mode flag.
  *
  *   --dangerously-skip-permissions
- *     Without it every tool call is auto-denied and the run ends `status: "ERROR"`
- *     having done nothing. --sandbox does not help and --mode plan does not either.
- *     Read capability and write capability are therefore not separable at agy's
- *     CLI, so isolation is done by choosing the workspace.
+ *     In the agy 1.1.18 E1 measurement, any denied tool call terminated the run
+ *     and cleared its answer; agy chose to deny even a read of .env, and all three
+ *     no-shell runs failed. Skipping prompts avoids that fatal permission gate.
+ *     Repository isolation is still done by choosing a disposable workspace.
  *
- * --mode plan is deliberately NOT used for read-only runs. Measured: plan mode
- * refuses reads and shell commands as well as writes, resolves its workspace to
- * ~/.gemini/antigravity-cli/scratch, and writes a plan artifact while waiting for
- * an approval that never arrives in headless mode. A reviewer that reads nothing is
- * not a reviewer.
+ * --mode plan is deliberately NOT used for read-only runs. Measured in agy 1.1.16,
+ * plan mode refused reads and shell commands as well as writes, resolved its
+ * workspace to ~/.gemini/antigravity-cli/scratch, and wrote a plan artifact while
+ * waiting for an approval that never arrived in headless mode. That is a plan
+ * generator, not the review path measured for agy 1.1.18.
  */
 export function buildAgyArgs(params: BuildAgyArgsParams): string[] {
   if (!params.workspace) {
@@ -957,9 +956,9 @@ export function detectPermissionEvidence(
       target,
       message:
         `permission_auto_denied: agy asked for permission to run \`${target}\` and, having no interactive approver, ` +
-        "denied itself. The run did no work. Headless agy needs --dangerously-skip-permissions for any tool use at " +
-        "all; neither --sandbox nor --mode plan is a substitute. This plugin always passes it, so seeing this means " +
-        "the run was not started by this plugin."
+        "denied itself. In the agy 1.1.18 E1 measurement, a denial terminated the run and cleared its answer. This " +
+        "plugin always passes --dangerously-skip-permissions to avoid that gate, so seeing this means the run was " +
+        "not started by this plugin."
     });
   }
 
@@ -1126,7 +1125,7 @@ export function agyFailureMessage(errorClass: string): string {
     case "provider_error":
       return "The provider returned a server-side error, which is worth retrying once. If it repeats, switch model rather than rewording the prompt.";
     case "permission_denied":
-      return "agy auto-denied its own tool calls, which is what headless agy does without --dangerously-skip-permissions. This plugin always passes that flag, so a run that reports this was not started by this plugin.";
+      return "agy denied a tool call. In the agy 1.1.18 E1 measurement, a denial terminated the run and cleared its answer. This plugin always passes --dangerously-skip-permissions to avoid that gate, so a run that reports this was not started by this plugin.";
     case "terminated":
       return "agy was terminated by a signal before producing a final result.";
     case "timeout":

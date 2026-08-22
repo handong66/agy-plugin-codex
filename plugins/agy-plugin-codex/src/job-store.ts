@@ -36,7 +36,8 @@ export function isTerminalJobStatus(status: JobStatus): boolean {
  * `direct`  -- agy is given the caller's own directory and may write to it.
  * `mirror`  -- agy is given a throwaway copy built by the worker and is never told
  *              the repository's path. This is how a read-only review is made
- *              read-only, because agy has no read-only permission mode.
+ *              reliable: the agy 1.1.18 E1 probe showed that a permission denial
+ *              terminates the run and clears its answer.
  */
 export type WorkspaceMode = "direct" | "mirror";
 
@@ -460,8 +461,9 @@ export function summarizeAgyOutput(record: JobRecord, stdout: string, stderr: st
   // launched the way this plugin launches one.
   if (parsed?.permissionMode && parsed.permissionMode !== "always-proceed") {
     warnings.push(
-      `agy reported permission_mode "${parsed.permissionMode}" rather than "always-proceed". Headless agy with any ` +
-        "other posture auto-denies its own tool calls, so this run could not use tools even if it appeared to try."
+      `agy reported permission_mode "${parsed.permissionMode}" rather than "always-proceed". In the agy 1.1.18 ` +
+        "E1 measurement, request-review denied a tool call, terminated the run, and cleared its answer, so tool " +
+        "work under this posture is not reliable even if earlier calls appeared to finish."
     );
   }
   // A review that opened nothing is an opinion. The rule is deliberately not applied

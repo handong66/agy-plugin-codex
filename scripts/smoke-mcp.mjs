@@ -94,8 +94,8 @@ try {
     );
   }
 
-  // The write-capable tools must SAY they are write-capable. agy has no read-only
-  // mode, so a caller that assumes otherwise loses files.
+  // The write-capable tools must SAY they are write-capable. This plugin invokes
+  // agy 1.1.18 with permissions skipped, so a caller that assumes otherwise loses files.
   for (const name of ["agy_run", "agy_continue", "agy_rescue"]) {
     const description = byName.get(name)?.description ?? "";
     check(

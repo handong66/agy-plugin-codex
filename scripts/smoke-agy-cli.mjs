@@ -24,7 +24,10 @@ const text = `${help.stdout ?? ""}\n${help.stderr ?? ""}`;
 /** Each entry says WHY the flag matters, so a failure explains itself. */
 const REQUIRED_FLAGS = [
   ["--add-dir", "the only way to set the workspace; without it agy runs in ~/.gemini/antigravity-cli"],
-  ["--dangerously-skip-permissions", "without it every headless tool call is auto-denied"],
+  [
+    "--dangerously-skip-permissions",
+    "agy 1.1.18 E1: a denied tool call terminates the run and clears its answer"
+  ],
   ["--output-format", "stream-json is the only format that names the model and each tool call"],
   ["--print-timeout", "agy's own deadline, set inside the worker's budget"],
   ["--conversation", "the resume handle every timed-out job keeps"],

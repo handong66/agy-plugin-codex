@@ -187,8 +187,8 @@ describe("a tool that claims a read-only guarantee cannot widen its own reach", 
 
 describe("the tool descriptions carry the load-bearing agy facts", () => {
   it("says that agy_run, agy_continue and agy_rescue are write-capable", () => {
-    // agy has no read-only permission mode, so a caller that assumes otherwise
-    // loses files (AGY-RUNTIME-CONTRACT.md §3).
+    // This plugin invokes agy 1.1.18 with permissions skipped, so a caller that
+    // assumes a direct run is read-only loses files (AGY-RUNTIME-CONTRACT.md §3).
     for (const name of ["agy_run", "agy_continue", "agy_rescue"]) {
       expect(byName.get(name)?.description ?? "", name).toMatch(/write-capable/i);
     }

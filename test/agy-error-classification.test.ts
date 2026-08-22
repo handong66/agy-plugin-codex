@@ -59,7 +59,7 @@ describe("classifyAgyFailure precedence", () => {
     );
   });
 
-  it("recognises a headless run that auto-denied its own tool calls", () => {
+  it("recognises a headless run carrying a tool-call permission denial", () => {
     expect(classifyAgyFailure({ exitCode: 1, stderr: "", errorText: PERMISSION_DENIED_ERROR })).toBe(
       "permission_denied"
     );
@@ -170,7 +170,7 @@ describe("agyFailureMessage", () => {
 });
 
 describe("detectPermissionEvidence", () => {
-  it("finds an auto-denied tool call in the run document when stderr is empty", () => {
+  it("finds a denied tool call in the run document when stderr is empty", () => {
     // Measured: the evidence is in the run document's `error` field on stdout, with
     // stderr empty -- the opposite of where a stderr-only guard would look.
     const evidence = detectPermissionEvidence("", { errorText: PERMISSION_DENIED_ERROR });

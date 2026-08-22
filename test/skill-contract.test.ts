@@ -265,8 +265,16 @@ describe("skill contract: the agy-specific facts are stated, not implied", () =>
     expect(skill).toContain("antigravity-cli");
   });
 
-  it("tells the reader that agy cannot read without also being able to write", () => {
-    expect(skill).toMatch(/cannot read without also being able to write/i);
+  it("pins the measured agy 1.1.18 fatal-denial rationale for mirrored reviews", () => {
+    expect(skill).toMatch(
+      /agy 1\.1\.18[\s\S]{0,120}denied tool call[\s\S]{0,80}terminates the run[\s\S]{0,40}clears the answer/i
+    );
+    expect(skill).toMatch(
+      /E1[\s\S]{0,120}denied a read of `?\.env`?[\s\S]{0,100}all\s+three\s+runs\s+failed[\s\S]{0,80}forbade\s+shell/i
+    );
+    expect(skill).toMatch(
+      /permissions skipped[\s\S]{0,100}(throwaway|disposable) copy[\s\S]{0,180}(never (given|told)|withholding) the repository's (real )?path/i
+    );
   });
 
   it("tells the reader that the exit code is not the verdict", () => {
@@ -282,9 +290,8 @@ describe("skill contract: the agy-specific facts are stated, not implied", () =>
   });
 
   it("never claims the read-only review protects more than the repository", () => {
-    // The isolation is a filesystem guarantee about the repository only: agy still
-    // writes to its own state directory on every run, and overclaiming here is the
-    // one documentation error that could actually cost a user data.
+    // The agy 1.1.16 probes observed writes to its state directory, so isolation is
+    // a repository-only guarantee; overclaiming here could actually cost user data.
     expect(skill).toMatch(/protects the repository, not the whole filesystem/i);
     expect(skill).not.toMatch(/cannot write anywhere|fully sandboxed|completely isolated/i);
   });

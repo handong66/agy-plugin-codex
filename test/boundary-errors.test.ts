@@ -174,9 +174,9 @@ describe("mirrorFailed", () => {
     expect(error.code).toBe("mirror_failed");
     expect(error.retryable).toBe(false);
     expect(error.message).toContain("EACCES copying /repo/.git");
-    // agy cannot separate read permission from write permission, so isolation is the
-    // throwaway copy. Without it there is no weaker guarantee to degrade to.
-    expect(error.message).toContain("no read-only permission mode");
+    // agy 1.1.18 E1 showed that a denied call kills the run and its answer. The
+    // message must preserve that reason for refusing a review when no copy exists.
+    expect(error.message).toContain("denied tool call terminated the run and cleared its answer");
     expect(error.message).toContain("agy_run");
     expect(error.details).toEqual({ source: "/repo" });
   });

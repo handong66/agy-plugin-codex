@@ -28,10 +28,10 @@ import {
 } from "../plugins/agy-plugin-codex/src/readonly-mirror.js";
 
 /**
- * The read-only guarantee this plugin publishes is a filesystem guarantee: agy has
- * no read-only permission mode, so a review is made read-only by handing agy a
- * throwaway copy of the working tree and never telling it the repository's path.
- * Everything in this file is a test of that copy, because the copy IS the promise.
+ * The read-only guarantee this plugin publishes is a filesystem guarantee. The agy
+ * 1.1.18 E1 measurement showed that a permission denial terminates the run and
+ * clears its answer, so a review avoids that gate inside a throwaway copy and never
+ * tells agy the repository's path. This file tests the copy that makes that promise.
  */
 
 const hasGit = (() => {

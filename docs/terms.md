@@ -13,9 +13,11 @@ Innovations.
 Two operational points worth stating as terms rather than documentation:
 
 - `agy_run`, `agy_continue` and `agy_rescue` are **write-capable in the directory you give
-  them**. agy has no read-only permission mode, so a run that may read may also write.
+  them**. This plugin invokes agy 1.1.18 with permission prompts skipped, so those direct
+  runs have write-capable tool access.
 - `agy_review` and `agy_adversarial_review` isolate by giving agy a disposable copy of the
-  working tree. That protects the repository, not the whole filesystem: agy still writes to
-  `~/.gemini/antigravity-cli` on every run, and it runs with its permission prompts skipped.
+  working tree. That protects the repository, not the whole filesystem: the agy 1.1.16 probes
+  observed writes to `~/.gemini/antigravity-cli`, and reviews run agy 1.1.18 with permission
+  prompts skipped.
 
 You remain responsible for reviewing anything agy produces before acting on it.

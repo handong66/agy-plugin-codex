@@ -19,7 +19,9 @@ These agy 1.1.18 measurements supplement the agy 1.1.16 record below rather than
 ### Permissions without `--dangerously-skip-permissions`
 
 In agy 1.1.18, headless runs without `--dangerously-skip-permissions` report
-`init.permission_mode: "request-review"`, permit reads, and deny writes.
+`init.permission_mode: "request-review"`. The ordinary-file probes below show that this mode
+can permit reads while denying writes; the E1 measurement that follows shows that agy 1.1.18
+also denies some reads and that this permission mode is not a reliable review path.
 
 - Across five agy 1.1.18 read probes, `view_file` moved from `ACTIVE` to `DONE` in all five.
 - The response contained the sentinel in exactly three of the five agy 1.1.18 read probes,
@@ -29,8 +31,21 @@ In agy 1.1.18, headless runs without `--dangerously-skip-permissions` report
 - In agy 1.1.18, `--sandbox` also permitted the measured read and returned the sentinel with
   terminal status `SUCCESS`.
 
-The isolation rationale and failure-classification wording derived from the agy 1.1.16
-permission finding have not yet been revisited for agy 1.1.18; that remains open work.
+### E1: a denied read terminates `request-review`
+
+On 2026-08-22, three agy 1.1.18 `request-review` runs received the same prompt: do not use
+`run_command` or any shell, and read only `.env` and `src/a.ts`. None produced an answer.
+
+| agy 1.1.18 E1 run | exit | status | used shell | produced answer | terminal cause |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 0 | `CANCELED` | no | no | ended silently after `view_file` |
+| 2 | 1 | `ERROR` | no | no | `permission check failed for read_file ".../.env": user denied permission` |
+| 3 | 1 | `ERROR` | no | no | same `.env` read denial |
+
+The agy 1.1.18 E1 measurement establishes two points that the ordinary-file probes did not:
+agy decides which tool calls to deny, including reads of `.env`, and a denial terminates the
+run with no answer. Prompting the reviewer not to use shell did not avoid that failure: all
+three agy 1.1.18 E1 runs failed.
 
 ### A third terminal status and non-deterministic outcomes
 
@@ -68,10 +83,10 @@ failure; exit 0 does not establish that the requested work happened.
 Measured claims in this document are version-scoped. The repository drift gate checks
 documentation identifiers against source at `test/skill-contract.test.ts:101` and source failure
 codes against the routing table at `test/skill-contract.test.ts:112`; it does not re-probe
-external-runtime behaviour. Pinning measured prose verbatim at
-`test/skill-contract.test.ts:268` and `test/skill-contract.test.ts:272` turns an aging observation
-into an enforced invariant and makes a later correction harder. A behavioural drift check would
-need to re-probe a pinned agy build rather than treat prose as an identifier contract.
+external-runtime behaviour. The skill-contract test now pins the three causal parts of the
+agy 1.1.18 E1 rationale — fatal denial, the `.env`/no-shell measurement, and mirror isolation —
+without making one exact paragraph immutable. A behavioural drift check still needs to re-probe
+a pinned agy build rather than treat prose as an external-runtime oracle.
 
 ---
 
@@ -115,7 +130,7 @@ Note a discrepancy worth remembering: the stream's `init` event reports `"cwd"` 
 `~/.gemini/antigravity-cli`. `init.cwd` is NOT a reliable statement of where the agent will
 work. Do not use it to verify workspace targeting.
 
-## 3. Without `--dangerously-skip-permissions`, every tool call is auto-denied.
+## 3. Permission denials are fatal to an agy 1.1.18 headless run
 
 Probe:
 
@@ -126,28 +141,33 @@ Probe:
      "error":"permission check failed for command \"cat a.txt\": user denied permission to
               run command:\ncat a.txt", ...}
 
-Headless mode has no interactive approver, so a permission prompt resolves to *denied* and
-the run ends `ERROR` having done nothing. This is not fixable by softer flags: `--sandbox`
-and `--mode plan` were both tested and both still auto-deny. There is no allowlist —
+In agy 1.1.16 headless mode, the measured permission prompt resolved to *denied* and the run
+ended `ERROR` having done nothing. In the agy 1.1.16 probes, `--sandbox` and `--mode plan`
+were both tested and both still denied the attempted tools. There was no measured allowlist:
 `~/.gemini/antigravity-cli/settings.json` holds only `colorScheme` and `trustedWorkspaces`,
 and having the repository's ancestor in `trustedWorkspaces` does not grant tool permission.
 
-*(new in 1.1.16)* The stream now corroborates this structurally: `init.permission_mode` reads
+*(new in agy 1.1.16)* The stream corroborated this structurally: `init.permission_mode` reads
 `"request-review"` without the flag and `"always-proceed"` with it, so the permission posture
 of a run can be asserted from agy's own output instead of inferred from the flags we believe
 we passed.
 
-**Consequence:** an agy run that is allowed to READ is, by the same flag, allowed to WRITE.
-Read capability and write capability are not separable at the CLI. This drives §6.
+The agy 1.1.18 re-probe corrects the agy 1.1.16 generalisation: `request-review` can permit
+ordinary-file reads while denying writes. It is still unsuitable for reliable review. In the
+agy 1.1.18 E1 measurement above, agy denied a read of `.env`; each denied call terminated the
+run and cleared the answer, and all three runs failed despite an explicit no-shell prompt.
+The plugin therefore uses `--dangerously-skip-permissions` for uninterrupted tool access and
+gets repository safety from the disposable workspace described in §6.
 
 ## 4. `--mode plan` is not a read-only reviewer. It is a plan generator.
 
 It is tempting to map another CLI's read-only `plan` *agent* onto agy's `--mode plan`. That
 mapping is wrong on two counts.
 
-Asked to write two files and run `ls`, plan mode refused all three — including the read and
-the shell command — and left the filesystem untouched. Asked to do a pure read of a file
-present in the shell cwd, it reported the file missing and named its workspace as
+In the agy 1.1.16 probes, a request to write two files and run `ls` made plan mode refuse all
+three operations — including the read and the shell command — and left the filesystem
+untouched. In a separate agy 1.1.16 pure-read probe, it reported the file missing and named
+its workspace as
 `~/.gemini/antigravity-cli/scratch`. It executes nothing, writes a plan artifact to
 `~/.gemini/antigravity-cli/brain/<conversation_id>/plan.md`, and waits for an approval that
 never comes in headless mode.
@@ -218,23 +238,34 @@ fields, and must never read `status` or the exit code alone.
 - `tool_info.parameters` keys are PascalCase and differ per tool: `view_file` uses
   `AbsolutePath`, `run_command` uses `CommandLine`. There is no uniform argument key, and
   there is no free-text tool-summary field on the event.
-- No `tool` step is ever emitted without `--dangerously-skip-permissions`, because the run
-  dies at the first tool call (§3).
+- In the agy 1.1.18 E1 measurement, tool steps could begin without
+  `--dangerously-skip-permissions`, but the run terminated when agy denied a tool call and
+  produced no answer (§3).
 
 ## 6. Read-only reviews: workspace isolation, not a mode flag
 
-Given §3 (read implies write) and §4 (plan mode reads nothing), the only honest way to offer
-a read-only review is to make writes land somewhere that does not matter: run agy with
-`--add-dir <throwaway copy of the working tree>` instead of the live repository.
+The mirror does not exist because agy lacks any separation between read and write: measured
+agy 1.1.18 `request-review` can permit ordinary-file reads while denying writes. It exists
+because a permission denial ends the agy 1.1.18 run and removes its answer, while agy itself
+decides what to deny. In E1, that decision included reading `.env`, and three of three runs
+failed even though the prompt explicitly forbade shell use.
+
+For a review, the plugin instead gives agy 1.1.18 a throwaway copy under
+`--dangerously-skip-permissions`. Tool work inside that copy does not encounter the
+`request-review` permission gate, so a denied call cannot discard the review midway. The live
+working tree is protected independently: agy receives the copy's path and is never told the
+repository's real path. This makes the safety boundary insensitive to changes in what a later
+agy permission policy chooses to deny. Reconsider this design only after a future agy build is
+measured to preserve the run and its answer after a denied tool call.
 
 What this does and does not guarantee:
 
 - **Guarantees:** the user's working tree and index are untouched, because the real path is
   never given to agy and is not reachable from anything it was told about.
-- **Does not guarantee:** that agy cannot write outside any workspace at all. It already
-  writes to `~/.gemini/antigravity-cli/` on every run, and `--dangerously-skip-permissions`
-  is a blanket approval. The isolation protects the repository, not the whole filesystem.
-  Documentation must say this plainly.
+- **Does not guarantee:** that agy cannot write outside any workspace at all. In the agy
+  1.1.16 measurements, agy wrote to `~/.gemini/antigravity-cli/`, and
+  `--dangerously-skip-permissions` is a blanket approval. The isolation protects the
+  repository, not the whole filesystem. Documentation must say this plainly.
 
 A copy, not `git worktree add`: a worktree writes into the user's own `.git/worktrees/` and
 leaves it there if the run crashes, checks out committed HEAD (losing exactly the uncommitted
@@ -355,7 +386,7 @@ Behaviour above two concurrent runs, and under a shared workspace, was **not** e
 ## 14. Flags and subcommands that matter
 
     --add-dir <dir>                  repeatable; the ONLY way to set the workspace (§2)
-    --dangerously-skip-permissions   required for any tool use at all (§3)
+    --dangerously-skip-permissions   avoids fatal request-review denials in agy 1.1.18 (§3)
     --output-format text|json|stream-json
     --print-timeout <dur>            e.g. 150s; default 5m0s
     --model <id>                     ids from `agy models`, not display names (§9)

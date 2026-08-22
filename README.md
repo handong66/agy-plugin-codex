@@ -19,18 +19,19 @@ your Antigravity account can reach.
 Three properties of agy's headless mode shape everything here. An integration built by
 analogy with another coding CLI gets all three wrong, and two of them fail *silently*.
 
-**agy cannot see a directory it was not given.** It ignores the process working directory
-entirely. Without `--add-dir` it operates inside `~/.gemini/antigravity-cli`, sees none of
-your repository, and will create files in its own state directory. Worse, a `--add-dir` that
-does not exist is not rejected: the run exits 0, reports `SUCCESS`, writes nothing to stderr,
-and does its work in the wrong place. So this plugin validates the workspace path before it
-spawns anything, and refuses a call with no resolvable workspace rather than running it.
+**The agy 1.1.16 workspace probe found that a run cannot see a directory it was not given.**
+agy 1.1.16 ignored the process working directory; without `--add-dir` it operated inside
+`~/.gemini/antigravity-cli`, saw none of the repository, and could create files in its own
+state directory. In agy 1.1.18, a nonexistent `--add-dir` was still not rejected: the run
+exited 0, reported `SUCCESS`, wrote nothing to stderr, and did no work in the requested
+workspace. So this plugin validates the workspace path before it spawns anything, and refuses
+a call with no resolvable workspace rather than running it.
 
-**agy cannot read without also being able to write.** Headless runs auto-deny every tool call
-unless permissions are skipped wholesale. `--sandbox` does not help. `--mode plan` does not
-either — it refuses reads and shell commands as well as writes, and works out of a scratch
-directory. There is no flag that grants read and withholds write, so a "read-only" review had
-to be built a different way (below).
+**In agy 1.1.18, a permission denial kills the headless run and removes its answer.** Its
+`request-review` mode can allow ordinary reads while denying writes, but agy chooses which
+calls to reject. In the 2026-08-22 E1 measurement it rejected reading `.env`, and all three
+runs failed even though the prompt forbade shell use. The review path below avoids that
+unreliable permission gate altogether.
 
 **agy 1.1.18 reports its own outcome independently of its exit code.** In agy 1.1.18, exit 0
 covers `SUCCESS`, `CANCELED`, and silent wrong-workspace `SUCCESS`, so exit 0 does not establish
@@ -78,10 +79,12 @@ workspace before acting on them.
 
 ## Read-only reviews are a filesystem guarantee
 
-Because agy cannot separate read permission from write permission, `agy_review` and
-`agy_adversarial_review` isolate by *workspace*: agy is handed a disposable copy of the
-working tree and is never told the repository's path. Nothing it does can reach your files,
-and that is a property of the filesystem rather than a promise about model behaviour.
+The mirror is not a workaround for missing read/write separation: measured agy 1.1.18 can
+permit ordinary reads while denying writes. It is protection against a fatal denial chosen by
+agy itself. `agy_review` and `agy_adversarial_review` run agy 1.1.18 with permissions skipped
+against a disposable copy, so `request-review` cannot discard a partly completed review. agy
+receives the copy's path, never the repository's real path, making working-tree safety a
+property of what the plugin discloses rather than of agy 1.1.18's permission policy.
 
 After the run, the copy is diffed and the real tree is fingerprinted, so
 `data.isolation.warnings` can tell you two things a prompt-based "please stay read-only" never
@@ -97,8 +100,8 @@ Three limits, stated rather than buried:
   mode. There is no fallback that copies an arbitrary directory.
 - **Files git ignores are absent** — `node_modules`, build output, `.env`. The reviewer is
   told this in its own prompt, so it should not report a missing dependency as a finding.
-- **This protects the repository, not the whole filesystem.** agy still writes to
-  `~/.gemini/antigravity-cli` on every run, and it runs with permissions skipped.
+- **This protects the repository, not the whole filesystem.** The agy 1.1.16 probes observed
+  writes to `~/.gemini/antigravity-cli`, and the review runs agy 1.1.18 with permissions skipped.
 
 ## Result envelope
 

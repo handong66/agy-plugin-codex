@@ -539,9 +539,10 @@ async function runOrStartJob(params: RunParams) {
   if (params.readOnly) {
     warnings.push(
       "Read-only here is a filesystem guarantee, not a prompt: agy is given a disposable copy of the working tree " +
-        "and is never told this repository's path, because agy cannot separate read permission from write " +
-        "permission. It protects the repository, not the whole filesystem -- agy still writes to " +
-        "~/.gemini/antigravity-cli on every run. Files git ignores are not in the copy."
+        "and is never told this repository's path. In the agy 1.1.18 E1 measurement, a denied tool call terminated " +
+        "the run and cleared its answer, so the copy is run with permissions skipped to avoid that gate. It protects " +
+        "the repository, not the whole filesystem -- the agy 1.1.16 probes observed writes to " +
+        "~/.gemini/antigravity-cli. Files git ignores are not in the copy."
     );
   }
 

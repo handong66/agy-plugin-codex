@@ -10,24 +10,22 @@ const execFileAsync = promisify(execFile);
 /**
  * Why this file exists
  * ====================
- * agy offers no read-only permission mode. Measured: without
- * `--dangerously-skip-permissions` every tool call is auto-denied and the run ends
- * having done nothing; `--sandbox` does not change that; and `--mode plan` refuses
- * reads and shell commands as well as writes while operating out of
- * `~/.gemini/antigravity-cli/scratch` instead of the repository. So a run that can
- * read the code can also write it, and no flag separates the two.
+ * Measured agy 1.1.18 `request-review` can allow ordinary reads while denying
+ * writes, so the mirror is not compensating for missing read/write separation.
+ * The agy 1.1.18 E1 measurement instead found that any denial terminates the run
+ * without an answer, that agy chooses what to deny (including reading `.env`), and
+ * that all three runs failed even under an explicit no-shell prompt.
  *
- * What DOES separate them is `--add-dir`, because agy ignores the process working
- * directory entirely and can only see what `--add-dir` hands it. A read-only review
- * therefore isolates by *workspace*: agy is given a throwaway copy of the working
- * tree and is never told the path of the real repository. The guarantee is a
- * filesystem guarantee -- the real tree is not reachable from any path the run was
- * given -- rather than a promise about model behaviour.
+ * The plugin therefore skips agy 1.1.18's permission prompts inside a throwaway
+ * copy, avoiding a request-review denial that could erase partial work. `--add-dir`
+ * points at that copy and the real repository path is never disclosed. The
+ * guarantee is about the filesystem path the plugin hands over, rather than a
+ * promise about agy 1.1.18's permission decisions.
  *
- * What this does NOT guarantee: agy is still running with a blanket permission
- * flag, and it already writes to `~/.gemini/antigravity-cli/` on every run. The
- * isolation protects the repository, not the whole filesystem, and the tool
- * descriptions say so plainly.
+ * What this does NOT guarantee: agy 1.1.18 is still running with a blanket
+ * permission flag, and the agy 1.1.16 probes observed writes to
+ * `~/.gemini/antigravity-cli/`. The isolation protects the repository, not the
+ * whole filesystem, and the tool descriptions say so plainly.
  *
  * Deliberately a copy and not `git worktree add`:
  *   - `git worktree add` writes into the user's own .git directory

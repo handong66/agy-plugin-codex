@@ -154,9 +154,10 @@ export function mirrorFailed(reason: string, details?: Record<string, unknown>):
   return new BoundaryError(
     "mirror_failed",
     `Could not build the disposable workspace copy this read-only review needs: ${reason}. ` +
-      "agy has no read-only permission mode -- a run that may read may also write -- so the review is isolated by " +
-      "giving agy a copy instead of the repository. Without that copy the review is refused rather than run against " +
-      "the real working tree. Use agy_run if you intend agy to work in the repository itself.",
+      "In the agy 1.1.18 E1 measurement, a denied tool call terminated the run and cleared its answer, so the " +
+      "review avoids that permission gate by giving agy a copy with permissions skipped. Without that copy the " +
+      "repository path cannot be withheld, so the review is refused rather than run against the real working tree. " +
+      "Use agy_run if you intend agy to work in the repository itself.",
     details
   );
 }

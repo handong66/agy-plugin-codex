@@ -37,9 +37,11 @@ const server = new McpServer(
   },
   {
     instructions:
-      "Use these tools to delegate work to the Antigravity CLI (agy) from Codex. agy cannot see a directory it was " +
-      "not given with --add-dir, and it cannot read without also being able to write, so read-only reviews run " +
-      "against a disposable copy of the working tree. Codex remains the final owner of every change."
+      "Use these tools to delegate work to the Antigravity CLI (agy) from Codex. The agy 1.1.16 workspace probe " +
+      "showed that agy cannot see a directory it was not given with --add-dir. In the agy 1.1.18 E1 measurement, " +
+      "a denied tool call terminated the run and cleared " +
+      "its answer, so read-only reviews avoid that gate by running with permissions skipped against a disposable " +
+      "copy of the working tree. Codex remains the final owner of every change."
   }
 );
 
@@ -393,7 +395,8 @@ server.registerTool(
     title: "Run agy",
     description:
       "Start a bounded agy task in the workspace. Background by default; keep the returned jobId. " +
-      "agy runs WRITE-CAPABLE: it has no read-only permission mode, so this tool can modify files in cwd. Use " +
+      "This plugin runs agy 1.1.18 with permissions skipped, so this tool is WRITE-CAPABLE and can modify files in " +
+      "cwd. Use " +
       "agy_review or agy_adversarial_review when you want a review that cannot touch the repository. " +
       "Done means data.outputSummary.resultComplete === true -- nothing else counts.",
     inputSchema: {
@@ -441,8 +444,8 @@ server.registerTool(
   {
     title: "agy Rescue",
     description:
-      "Ask agy for an independent diagnosis of a stuck task. Runs write-capable in cwd: agy cannot be given read " +
-      "access without write access, and unlike the two review tools this one is not isolated, because a rescue " +
+      "Ask agy for an independent diagnosis of a stuck task. Runs write-capable in cwd because this plugin invokes " +
+      "agy 1.1.18 with permissions skipped; unlike the two review tools this one is not isolated, because a rescue " +
       "often needs to run commands and try things in the real tree. Use agy_review if you want an opinion that " +
       "cannot touch the repository. Done means outputSummary.resultComplete === true.",
     inputSchema: {

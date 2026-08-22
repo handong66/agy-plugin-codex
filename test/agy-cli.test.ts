@@ -106,8 +106,8 @@ describe("buildAgyArgs", () => {
     // --add-dir is the ONLY thing that decides what a run can see: agy ignores the
     // process working directory and otherwise operates in ~/.gemini/antigravity-cli.
     expect(valueOf(args, "--add-dir")).toBe("/repo");
-    // Without this every tool call is auto-denied and the run ends ERROR having done
-    // nothing; neither --sandbox nor --mode plan is a substitute.
+    // In agy 1.1.18 E1, a denied tool call terminated the run and cleared its
+    // answer; skipping permission prompts avoids that gate.
     expect(args).toContain("--dangerously-skip-permissions");
     // A prompt may legitimately begin with a slash, which agy would otherwise
     // reinterpret as one of its own slash commands.

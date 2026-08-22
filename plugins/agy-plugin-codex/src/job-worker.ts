@@ -63,15 +63,17 @@ async function writeLog(path: string, value: string): Promise<void> {
  * Resolve the directory this job's `--add-dir` will actually name.
  *
  * For a `direct` job that is the caller's own directory. For a `mirror` job the
- * worker builds a throwaway copy of the working tree here, because agy has no
- * read-only permission mode and the only thing that separates reading from writing
- * is which directory `--add-dir` was given.
+ * worker builds a throwaway copy of the working tree here. In the agy 1.1.18 E1
+ * measurement, a permission denial terminated the run and cleared its answer, so
+ * reviews avoid that gate and protect the repository by disclosing only the copy's
+ * `--add-dir` path.
  *
- * The path is stat'd before it is used either way. Measured, this is agy's most
- * dangerous silent failure: an `--add-dir` that does not exist is not rejected --
- * agy exits 0, reports SUCCESS, writes nothing to stderr, and quietly runs inside
- * `~/.gemini/antigravity-cli/` instead. Nothing in the output distinguishes that
- * from a real run, so the check has to happen before the spawn.
+ * The path is stat'd before it is used either way. In the agy 1.1.18 workspace
+ * measurement, a nonexistent `--add-dir` was not rejected: agy exited 0, reported
+ * SUCCESS, wrote nothing to stderr, and did no work in the requested workspace.
+ * The agy 1.1.16 workspace probe identified `~/.gemini/antigravity-cli/` as the
+ * fallback. Nothing in the agy 1.1.18 output distinguished the silent failure, so
+ * the check has to happen before the spawn.
  */
 async function resolveWorkspace(record: JobRecord): Promise<{
   workspace: string;

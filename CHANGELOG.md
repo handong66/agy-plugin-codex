@@ -47,11 +47,11 @@ change the design rather than decorate it:
 
 ### Read-only reviews are a filesystem guarantee
 
-agy has no read-only permission mode: headless runs auto-deny every tool call unless
-permissions are skipped wholesale, `--sandbox` does not change that, and `--mode plan`
-refuses reads and shell commands as well as writes while working out of
-`~/.gemini/antigravity-cli/scratch`. Read capability and write capability are not separable
-at the CLI.
+The original agy 1.1.16 rationale generalised from probes in which permission-gated tool
+calls were denied. **Correction (2026-08-22, measured against agy 1.1.18):**
+`request-review` can permit ordinary reads while denying writes, but agy 1.1.18 chooses what
+to deny and terminates the run without an answer after a denial. E1 denied a read of `.env`,
+and all three runs failed despite an explicit no-shell prompt.
 
 So `agy_review` and `agy_adversarial_review` isolate by workspace instead: agy is handed a
 disposable copy of the working tree, built from git's tracked and untracked file list, and is
@@ -60,10 +60,14 @@ fingerprinted, so `readonly_run_wrote_files` names anything the review edited in
 and `tree_changed_during_readonly_run` fires if the real tree moved. Mirror paths are
 rewritten back to the repository before any output is persisted.
 
+The corrected agy 1.1.18 rationale leaves that design unchanged: permissions are skipped in
+the copy so `request-review` cannot kill a partial review, while the real path is withheld so
+repository safety does not depend on agy 1.1.18's permission decisions.
+
 Stated plainly rather than overclaimed: this protects the repository, not the whole
-filesystem. agy still writes to `~/.gemini/antigravity-cli` on every run. Files git ignores
-are absent from the copy, and the review prompt says so, so a missing `node_modules` is not
-reported as a finding.
+filesystem. The agy 1.1.16 probes observed writes to `~/.gemini/antigravity-cli`. Files git
+ignores are absent from the copy, and the review prompt says so, so a missing `node_modules`
+is not reported as a finding.
 
 ### Evidence and diagnostics
 

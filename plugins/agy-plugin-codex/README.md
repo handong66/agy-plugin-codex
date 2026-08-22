@@ -11,9 +11,10 @@ behaviour; `skills/agy/SKILL.md` is what a caller should read.
 - `cwd` becomes agy's `--add-dir` and is the whole of what a run can reach. agy ignores the
   process working directory, and a non-existent `--add-dir` fails silently, so the path is
   validated before anything is spawned.
-- Runs are write-capable, because agy has no read-only permission mode. The two review tools
-  isolate by giving agy a disposable copy of the working tree instead; that copy is built from
-  git's file list, so they need a git repository and refuse with `mirror_failed` outside one.
+- Direct runs are write-capable because this plugin invokes agy 1.1.18 with permission prompts
+  skipped. The two review tools give agy a disposable copy of the working tree so a fatal
+  `request-review` denial cannot erase a partial answer; that copy is built from git's file
+  list, so they need a git repository and refuse with `mirror_failed` outside one.
 - Background by default; state is private, restart-safe, and projected before it crosses the
   wire.
 - `timeoutMs` 10000..86400000, default 600000, clamped to 240000 in the foreground.

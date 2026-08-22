@@ -80,7 +80,7 @@ They are deliberately path-free: they say which source was unusable, never what 
 | `timeout` | yes | Not an error: the budget ran out. The conversation survives — resume it with `agy_continue` and a larger `timeoutMs`. Rerunning discards the work. |
 | `stalled` | yes | Three conditions together: under 4000 characters of output in total, no completed tool call, and 45s of silence. A provider or model hang, not slow work; a larger budget will not help. Retry with a lighter explicit model. A run that has produced real output, or has completed a tool call, is never killed this way however long it goes quiet. |
 | `terminated` | yes | A signal from outside ended it. Never a statement about the model or the account. |
-| `permission_denied` | no | agy auto-denied its own tool calls. This plugin always passes the skip-permissions flag, so a run reporting this was not started by this plugin. |
+| `permission_denied` | no | agy denied a tool call. In the agy 1.1.18 E1 measurement, a denial terminated the run and cleared its answer. This plugin always passes the skip-permissions flag to avoid that gate, so a run reporting this was not started by this plugin. |
 | `auth_required` | no | agy is not signed in. Run `agy` once in a terminal and complete the Google sign-in. |
 | `quota_exhausted` | no | The account's balance or quota is exhausted. Retrying will fail. |
 | `model_unauthorized` | no | The account is not authorized for that model. Choose one `agy_check` lists. |

@@ -23,8 +23,8 @@ describe("parseAgyRun on a successful stream-json run", () => {
     // observedModel is read off the init event, never inferred from the flags this
     // plugin believes it passed.
     expect(parsed?.observedModel).toBe("gemini-3.7-flash-low");
-    // "always-proceed" is what --dangerously-skip-permissions produces; without it
-    // agy reports "request-review" and auto-denies every tool call.
+    // "always-proceed" is what --dangerously-skip-permissions produces. In agy
+    // 1.1.18 E1, request-review denied a tool call and terminated without an answer.
     expect(parsed?.permissionMode).toBe("always-proceed");
     expect(parsed?.reportedCwd).toBe("/tmp/agy-probe");
   });
